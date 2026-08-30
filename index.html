@@ -415,7 +415,7 @@ function switchTab(tabId){
   }
 }
 
-// Fonction d'analyse IA de la photo
+// Fonction d'analyse IA de la photo (avec gemini-1.5-flash)
 function analyzePhoto(dataUrl) {
   if (!geminiApiKey) {
     toast("Pensez à ajouter votre clé API dans Réglages pour l'analyse auto.");
@@ -439,7 +439,7 @@ function analyzePhoto(dataUrl) {
     }]
   };
 
-  fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + geminiApiKey, {
+  fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + geminiApiKey, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -450,7 +450,6 @@ function analyzePhoto(dataUrl) {
   })
   .then(function(data){
     var text = data.candidates[0].content.parts[0].text.trim();
-    // Nettoyage au cas où le modèle inclut des balises ```json
     text = text.replace(/```json/g, '').replace(/```/g, '').trim();
     var parsed = JSON.parse(text);
 
