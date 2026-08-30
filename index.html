@@ -285,7 +285,7 @@ function saveWines(data) {
 
 var wines = [];
 var currentTypeFilter = 'all';
-var geminiApiKey = safeGetItem('gemini_api_key') || '';
+var geminiApiKey = (safeGetItem('gemini_api_key') || '').trim();
 var pendingPhoto = null;
 
 var TYPE_COLORS = {rouge:'#7A1F2B', blanc:'#D8C87B', rose:'#D98A93', champagne:'#C9A24B', cidre:'#9CAE70'};
@@ -294,7 +294,7 @@ function toast(msg){
   var t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(function(){ t.classList.remove('show'); }, 3000);
+  setTimeout(function(){ t.classList.remove('show'); }, 3500);
 }
 
 function updateHeaderSub(){
@@ -415,10 +415,10 @@ function switchTab(tabId){
   }
 }
 
-// Fonction d'analyse IA de la photo (avec gemini-1.5-flash)
 function analyzePhoto(dataUrl) {
-  if (!geminiApiKey) {
-    toast("Pensez à ajouter votre clé API dans Réglages pour l'analyse auto.");
+  var key = (geminiApiKey || safeGetItem('gemini_api_key') || '').trim();
+  if (!key) {
+    toast("Entrez d'abord votre clé API Gemini dans Réglages");
     return;
   }
 
@@ -439,13 +439,19 @@ function analyzePhoto(dataUrl) {
     }]
   };
 
-  fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + geminiApiKey, {
+  // Modèle mis à jour vers gemini-1.5-flash-latest
+  fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=' + key, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   })
   .then(function(res){
-    if(!res.ok) throw new Error("Erreur API (" + res.status + ")");
+    if(!res.ok){
+      return res.json().then(function(errData){
+        var errMsg = (errData && errData.error && errData.error.message) ? errData.error.message : ("Erreur HTTP " + res.status);
+        throw new Error(errMsg);
+      });
+    }
     return res.json();
   })
   .then(function(data){
@@ -467,7 +473,7 @@ function analyzePhoto(dataUrl) {
   .catch(function(err){
     console.error(err);
     az.innerHTML = '<img class="photo-preview" src="' + dataUrl + '">';
-    toast("Impossible d'analyser l'étiquette. Vérifiez votre clé API.");
+    toast("Erreur d'analyse : " + err.message);
   });
 }
 
