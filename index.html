@@ -107,14 +107,21 @@
   .field-row{display:flex; gap:10px;}
   .field-row .field{flex:1;}
 
-  .photo-zone{ border:1.5px dashed var(--cave-border); border-radius:12px; padding:24px 16px; text-align:center; margin-bottom:18px; cursor:pointer; }
+  .photo-zone{ border:1.5px dashed var(--cave-border); border-radius:12px; padding:24px 16px; text-align:center; margin-bottom:14px; cursor:pointer; }
   .photo-zone svg{width:30px; height:30px; stroke:var(--gold); fill:none; stroke-width:1.4; margin-bottom:8px;}
-  .photo-preview{width:100%; max-height:220px; object-fit:cover; border-radius:12px; margin-bottom:14px;}
+  .photo-preview{width:100%; max-height:200px; object-fit:cover; border-radius:12px; margin-bottom:10px;}
+  
+  .ai-status{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    background:var(--cave-1); border:1px solid var(--cave-border); padding:12px;
+    border-radius:8px; font-size:13px; color:var(--gold); margin-bottom:14px;
+  }
 
   .toast{
     position:fixed; bottom:90px; left:50%; transform:translateX(-50%);
     background:var(--cave-2); border:1px solid var(--cave-border); color:var(--parchment);
     padding:10px 16px; border-radius:8px; font-size:13px; z-index:50; opacity:0; transition:opacity .2s; pointer-events:none;
+    text-align:center; max-width:90%;
   }
   .toast.show{opacity:1;}
   .spinner{width:16px; height:16px; border-radius:50%; border:2px solid var(--cave-border); border-top-color:var(--gold); animation:spin .8s linear infinite; display:inline-block;}
@@ -287,7 +294,7 @@ function toast(msg){
   var t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(function(){ t.classList.remove('show'); }, 2200);
+  setTimeout(function(){ t.classList.remove('show'); }, 3000);
 }
 
 function updateHeaderSub(){
@@ -408,6 +415,63 @@ function switchTab(tabId){
   }
 }
 
+// Fonction d'analyse IA de la photo
+function analyzePhoto(dataUrl) {
+  if (!geminiApiKey) {
+    toast("Pensez à ajouter votre clé API dans Réglages pour l'analyse auto.");
+    return;
+  }
+
+  var az = document.getElementById('photo-analysis-zone');
+  az.innerHTML = '<img class="photo-preview" src="' + dataUrl + '">' +
+                 '<div class="ai-status"><span class="spinner"></span> Analyse de l\'étiquette par l\'IA...</div>';
+
+  var base64Data = dataUrl.split(',')[1];
+  
+  var prompt = "Analyse cette étiquette de bouteille de vin ou cidre. Renvoie UNIQUEMENT un objet JSON valide avec ces clés précises: \"name\" (nom du vin), \"producer\" (producteur/domaine), \"vintage\" (millésime sous forme d'année ou null), \"type\" (uniquement une de ces valeurs: rouge, blanc, rose, champagne, cidre), \"region\" (région viticole), \"drinkStart\" (année recommandée de début de garde, nombre ou null), \"drinkEnd\" (année recommandée de fin de garde, nombre ou null). Ne mets pas de balises de code markdown autour du JSON.";
+
+  var payload = {
+    contents: [{
+      parts: [
+        { text: prompt },
+        { inlineData: { mimeType: "image/jpeg", data: base64Data } }
+      ]
+    }]
+  };
+
+  fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + geminiApiKey, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  .then(function(res){
+    if(!res.ok) throw new Error("Erreur API (" + res.status + ")");
+    return res.json();
+  })
+  .then(function(data){
+    var text = data.candidates[0].content.parts[0].text.trim();
+    // Nettoyage au cas où le modèle inclut des balises ```json
+    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    var parsed = JSON.parse(text);
+
+    if(parsed.name) document.getElementById('f-name').value = parsed.name;
+    if(parsed.producer) document.getElementById('f-producer').value = parsed.producer;
+    if(parsed.vintage) document.getElementById('f-vintage').value = parsed.vintage;
+    if(parsed.type) document.getElementById('f-type').value = parsed.type;
+    if(parsed.region) document.getElementById('f-region').value = parsed.region;
+    if(parsed.drinkStart) document.getElementById('f-drinkstart').value = parsed.drinkStart;
+    if(parsed.drinkEnd) document.getElementById('f-drinkend').value = parsed.drinkEnd;
+
+    az.innerHTML = '<img class="photo-preview" src="' + dataUrl + '">';
+    toast("Étiquette analysée avec succès !");
+  })
+  .catch(function(err){
+    console.error(err);
+    az.innerHTML = '<img class="photo-preview" src="' + dataUrl + '">';
+    toast("Impossible d'analyser l'étiquette. Vérifiez votre clé API.");
+  });
+}
+
 function initApp() {
   wines = loadWines();
 
@@ -465,8 +529,7 @@ function initApp() {
     var reader = new FileReader();
     reader.onload = function(evt){
       pendingPhoto = evt.target.result;
-      var az = document.getElementById('photo-analysis-zone');
-      az.innerHTML = '<img class="photo-preview" src="' + pendingPhoto + '">';
+      analyzePhoto(pendingPhoto);
     };
     reader.readAsDataURL(file);
   });
