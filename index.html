@@ -153,6 +153,7 @@
 </header>
 
 <main>
+  <!-- TAB CAVE -->
   <section id="tab-cave" class="active">
     <div id="priority-block" style="display:none;">
       <p style="font-size:12px; text-transform:uppercase; color:var(--parchment-dim); margin-bottom:8px;">À boire d'urgence (Rouge)</p>
@@ -171,6 +172,7 @@
     <div id="cellar-list"></div>
   </section>
 
+  <!-- TAB AJOUTER -->
   <section id="tab-add">
     <div class="photo-zone" id="photo-zone">
       <svg viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="14" r="3.5"/></svg>
@@ -238,6 +240,7 @@
     </form>
   </section>
 
+  <!-- TAB ACCORDS -->
   <section id="tab-pairing">
     <p style="font-size:12px; text-transform:uppercase; color:var(--parchment-dim); margin-bottom:8px;">Accord mets-vins intelligent</p>
     <div class="field">
@@ -248,6 +251,7 @@
     <div id="pairing-results" style="margin-top:18px;"></div>
   </section>
 
+  <!-- TAB REGLAGES -->
   <section id="tab-settings">
     <p style="font-size:12px; text-transform:uppercase; color:var(--parchment-dim); margin-bottom:8px;">Configuration IA</p>
     <p style="font-size:13px; color:var(--parchment-dim); line-height:1.4;">Entrez votre clé API Google Gemini pour activer la reconnaissance photo d'étiquettes, l'estimation des prix et la recommandation d'accords.</p>
@@ -454,22 +458,22 @@ function switchTab(tabId){
   }
 }
 
-// --- INTELLIGENCE ARTIFICIELLE (GEMINI API) ---
+// --- INTELLIGENCE ARTIFICIELLE (GEMINI 1.5 FLASH API) ---
 
 function analyzePhoto(dataUrl) {
   var key = (geminiApiKey || localStorage.getItem('gemini_api_key') || '').trim();
   if (!key) {
-    toast("Entrez d'abord votre clé API Gemini dans l'onglet Réglages");
+    toast("Veuillez d'abord saisir votre clé API dans l'onglet Réglages.");
     return;
   }
 
   var az = document.getElementById('photo-analysis-zone');
   az.innerHTML = '<img class="photo-preview" src="' + dataUrl + '">' +
-                 '<div class="ai-status"><span class="spinner"></span> Analyse de l\'étiquette et estimation du prix...</div>';
+                 '<div class="ai-status"><span class="spinner"></span> Analyse Gemini 1.5 en cours...</div>';
 
   var base64Data = dataUrl.split(',')[1];
   
-  var prompt = "Analyse cette étiquette de bouteille de vin ou cidre. Estime le prix moyen du marché en euros (€). Renvoie UNIQUEMENT un objet JSON valide avec ces clés précises: \"name\" (nom du vin), \"producer\" (producteur/domaine), \"vintage\" (millésime sous forme d'année ou null), \"type\" (uniquement une de ces valeurs: rouge, blanc, rose, champagne, cidre), \"region\" (région viticole), \"price\" (estimation moyenne du prix en euros sous forme de nombre ou null), \"drinkStart\" (année recommandée de début de garde, nombre ou null), \"drinkEnd\" (année recommandée de fin de garde, nombre ou null). Ne mets pas de balises markdown ```json.";
+  var prompt = "Analyse cette étiquette de bouteille de vin ou cidre. Estime le prix moyen du marché en euros (€). Renvoie UNIQUEMENT un objet JSON valide avec ces clés précises: \"name\" (nom du vin), \"producer\" (producteur/domaine), \"vintage\" (millésime sous forme d'année ou null), \"type\" (uniquement une de ces valeurs: rouge, blanc, rose, champagne, cidre), \"region\" (région viticole), \"price\" (estimation moyenne du prix en euros sous forme de nombre ou null), \"drinkStart\" (année recommandée de début de garde, nombre ou null), \"drinkEnd\" (année recommandée de fin de garde, nombre ou null). Pas de balises markdown.";
 
   var payload = {
     contents: [{
@@ -480,18 +484,30 @@ function analyzePhoto(dataUrl) {
     }]
   };
 
-  fetch('[https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=](https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=)' + key, {
+  // Endpoint mis à jour sur gemini-1.5-flash
+  var apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + key;
+
+  fetch(apiUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   })
   .then(function(res){
-    if(!res.ok){ throw new Error("Erreur HTTP " + res.status); }
+    if(!res.ok){
+      return res.json().then(function(errData){
+        throw new Error(errData.error ? errData.error.message : "Erreur HTTP " + res.status);
+      });
+    }
     return res.json();
   })
   .then(function(data){
+    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+      throw new Error("Réponse de l'IA invalide ou vide.");
+    }
+    
     var text = data.candidates[0].content.parts[0].text.trim();
-    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    text = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+    
     var parsed = JSON.parse(text);
 
     if(parsed.name) document.getElementById('f-name').value = parsed.name;
@@ -507,9 +523,9 @@ function analyzePhoto(dataUrl) {
     toast("Analyse et prix estimé avec succès !");
   })
   .catch(function(err){
-    console.error(err);
+    console.error("Erreur Gemini API:", err);
     az.innerHTML = '<img class="photo-preview" src="' + dataUrl + '">';
-    toast("Erreur lors de l'analyse : vérifiez la clé API.");
+    alert("Erreur Gemini : " + err.message);
   });
 }
 
@@ -533,7 +549,7 @@ function findPairing() {
   }
 
   var resDiv = document.getElementById('pairing-results');
-  resDiv.innerHTML = '<div class="ai-status"><span class="spinner"></span> Analyse de votre cave pour trouver le meilleur accord...</div>';
+  resDiv.innerHTML = '<div class="ai-status"><span class="spinner"></span> Recherche du meilleur accord avec Gemini 1.5...</div>';
 
   var caveSummary = activeWines.map(function(w){
     return "- " + w.name + " (" + (w.vintage || 'N/C') + ", " + w.type + ", " + (w.region || 'Région inconnue') + ")";
@@ -544,13 +560,19 @@ function findPairing() {
                "Propose-moi le MEILLEUR accord en choisissant UNIQUEMENT parmi les bouteilles de ma cave ci-dessus. " +
                "Explique brièvement pourquoi cet accord fonctionne et quelle bouteille ouvrir. Si aucun vin ne convient du tout, suggère le type de vin idéal à acheter.";
 
-  fetch('[https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=](https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=)' + key, {
+  var apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + key;
+
+  fetch(apiUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
   })
   .then(function(res){
-    if(!res.ok){ throw new Error("Erreur HTTP " + res.status); }
+    if(!res.ok){
+      return res.json().then(function(errData){
+        throw new Error(errData.error ? errData.error.message : "Erreur HTTP " + res.status);
+      });
+    }
     return res.json();
   })
   .then(function(data){
@@ -558,8 +580,8 @@ function findPairing() {
     resDiv.innerHTML = '<div class="pairing-box">' + text.replace(/\n/g, '<br>') + '</div>';
   })
   .catch(function(err){
-    console.error(err);
-    resDiv.innerHTML = '<div class="pairing-box">Erreur lors de la recherche d\'accord. Vérifiez votre clé API.</div>';
+    console.error("Erreur Gemini API:", err);
+    resDiv.innerHTML = '<div class="pairing-box">Erreur lors de la recherche : ' + err.message + '</div>';
   });
 }
 
