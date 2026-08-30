@@ -19,9 +19,11 @@
     --wine:#7A1F2B;
     --wine-light:#A8394A;
     --gold:#C9A24B;
-    --seal-ok:#5C7A52;
-    --seal-soon:#C9822B;
-    --seal-urgent:#A83232;
+    
+    /* Légende Couleurs de Maturité */
+    --seal-ready:#5C7A52; /* Vert : Bon à boire */
+    --seal-keep:#C99E2B;  /* Jaune : À garder */
+    --seal-urgent:#A83232;/* Rouge : À boire d'urgence */
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   body{
@@ -82,13 +84,13 @@
   }
   .seal{ position:absolute; top:8px; right:8px; width:11px; height:11px; border-radius:50%; }
   .priority-card .type-tag{font-size:10px; color:var(--parchment-dim); text-transform:uppercase;}
-  .priority-card .name{font-family:'Fraunces',serif; font-size:14px; margin:4px 0 2px;}
+  .priority-card .name{font-family:'Fraunces',serif; font-size:14px; margin:4px 0 2px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;}
   .priority-card .vintage{font-size:11px; color:var(--gold);}
   .priority-card .window{font-size:10.5px; color:var(--parchment-dim); margin-top:6px;}
 
   .wine-card{
     display:flex; gap:12px; background:var(--cave-1); border:1px solid var(--cave-border);
-    border-left-width:4px; border-radius:10px; padding:12px; margin-bottom:10px;
+    border-left-width:5px; border-radius:10px; padding:12px; margin-bottom:10px; position:relative;
   }
   .wine-card .thumb{ width:52px; height:52px; border-radius:8px; object-fit:cover; background:var(--cave-2); flex-shrink:0; }
   .wine-card .thumb.placeholder{display:flex; align-items:center; justify-content:center; font-size:20px;}
@@ -98,6 +100,7 @@
   .wine-card .meta{display:flex; gap:8px; align-items:center; margin-top:6px; flex-wrap:wrap;}
   .wine-card .vintage-badge{ font-family:'IBM Plex Mono',monospace; font-size:11px; background:var(--cave-2); padding:2px 7px; border-radius:5px; color:var(--gold); }
   .wine-card .price-badge{ font-family:'IBM Plex Mono',monospace; font-size:11px; background:var(--cave-2); padding:2px 7px; border-radius:5px; color:var(--parchment); border:1px solid var(--cave-border); }
+  .wine-card .status-badge{ font-size:10.5px; padding:2px 7px; border-radius:5px; font-weight:600; }
   .wine-card .actions{display:flex; gap:6px; margin-top:8px;}
   .wine-card .actions button{ background:none; border:1px solid var(--cave-border); color:var(--parchment-dim); font-size:11px; padding:4px 9px; border-radius:6px; cursor:pointer; }
 
@@ -153,7 +156,7 @@
   <!-- TAB CAVE -->
   <section id="tab-cave" class="active">
     <div id="priority-block" style="display:none;">
-      <p style="font-size:12px; text-transform:uppercase; color:var(--parchment-dim); margin-bottom:8px;">À boire en priorité</p>
+      <p style="font-size:12px; text-transform:uppercase; color:var(--parchment-dim); margin-bottom:8px;">À boire d'urgence (Rouge)</p>
       <div class="priority-row" id="priority-row"></div>
     </div>
 
@@ -230,7 +233,7 @@
         </div>
       </div>
       <div class="field">
-        <label>Notes personnels</label>
+        <label>Notes personnelles</label>
         <textarea id="f-notes" placeholder="Notes de dégustation, lieu d'achat..."></textarea>
       </div>
       <button type="submit" class="btn block">Ajouter à la cave</button>
@@ -282,7 +285,7 @@
 <div id="toast" class="toast"></div>
 
 <script>
-// --- GESTION STOCKAGE LOCAL (PERSISTANT) ---
+// --- GESTION STOCKAGE LOCAL (PERSISTANT ET SECOURE) ---
 function loadWines() {
   try {
     var raw = localStorage.getItem('macave_wines');
@@ -298,6 +301,7 @@ function saveWines(data) {
     localStorage.setItem('macave_wines', JSON.stringify(data));
   } catch(e) {
     console.error("Erreur de sauvegarde dans localStorage", e);
+    toast("Erreur d'enregistrement : mémoire locale saturée.");
   }
 }
 
@@ -305,8 +309,6 @@ var wines = [];
 var currentTypeFilter = 'all';
 var geminiApiKey = (localStorage.getItem('gemini_api_key') || '').trim();
 var pendingPhoto = null;
-
-var TYPE_COLORS = {rouge:'#7A1F2B', blanc:'#D8C87B', rose:'#D98A93', champagne:'#C9A24B', cidre:'#9CAE70'};
 
 function toast(msg){
   var t = document.getElementById('toast');
@@ -321,13 +323,37 @@ function updateHeaderSub(){
   document.getElementById('header-sub').textContent = n === 0 ? "Votre cave est vide" : n + " bouteille" + (n > 1 ? 's' : '') + " en cave";
 }
 
+// --- SYSTEME DE CODE COULEUR DE MATURITÉ ---
+// Vert = Bon à boire maintenant
+// Jaune = Peut être gardé
+// Rouge = À boire d'urgence / Périmé
 function getUrgency(w){
-  if(!w.drinkStart && !w.drinkEnd) return {status:'unknown', color:'#5F5E5A'};
-  var y = new Date().getFullYear();
-  if(w.drinkStart && y < w.drinkStart) return {status:'wait', color:'var(--seal-ok)'};
-  if(w.drinkEnd && y > w.drinkEnd) return {status:'overdue', color:'var(--seal-urgent)'};
-  if(w.drinkEnd && (w.drinkEnd - y) <= 1) return {status:'soon', color:'var(--seal-soon)'};
-  return {status:'ok', color:'var(--seal-ok)'};
+  var currentYear = new Date().getFullYear();
+  var start = parseInt(w.drinkStart) || null;
+  var end = parseInt(w.drinkEnd) || null;
+
+  // 1. Si "À boire avant" est dépassé ou atteint -> ROUGE (A boire d'urgence)
+  if (end && currentYear >= end) {
+    return { status: 'urgent', label: 'À boire d\'urgence', color: 'var(--seal-urgent)' };
+  }
+  
+  // 2. Si on est avant la période "À boire dès" -> JAUNE (À garder)
+  if (start && currentYear < start) {
+    return { status: 'keep', label: 'À garder', color: 'var(--seal-keep)' };
+  }
+
+  // 3. Si on est dans la fenêtre idéale -> VERT (Bon à boire)
+  if (start && end && currentYear >= start && currentYear < end) {
+    return { status: 'ready', label: 'Bon à boire', color: 'var(--seal-ready)' };
+  }
+
+  // Si seulement start renseigné et qu'on y est -> VERT
+  if (start && !end && currentYear >= start) {
+    return { status: 'ready', label: 'Bon à boire', color: 'var(--seal-ready)' };
+  }
+
+  // Si aucune donnée de maturité
+  return { status: 'unknown', label: 'Garde non spécifiée', color: '#5F5E5A' };
 }
 
 function renderAll(){
@@ -336,26 +362,26 @@ function renderAll(){
 }
 
 function renderPriority(){
-  var active = wines.filter(function(w){ return !w.consumed && w.drinkEnd; });
-  var top = active.filter(function(w){
-    var u = getUrgency(w);
-    return u.status === 'overdue' || u.status === 'soon';
+  var active = wines.filter(function(w){ return !w.consumed; });
+  var urgentWines = active.filter(function(w){
+    return getUrgency(w).status === 'urgent';
   }).slice(0,8);
   
   var block = document.getElementById('priority-block');
   var row = document.getElementById('priority-row');
-  if(top.length === 0){ block.style.display = 'none'; return; }
+  if(urgentWines.length === 0){ block.style.display = 'none'; return; }
   block.style.display = 'block';
   
   var html = '';
-  for(var i = 0; i < top.length; i++){
-    var w = top[i];
-    html += '<div class="priority-card">' +
-      '<div class="seal" style="background:' + getUrgency(w).color + '"></div>' +
+  for(var i = 0; i < urgentWines.length; i++){
+    var w = urgentWines[i];
+    var urg = getUrgency(w);
+    html += '<div class="priority-card" style="border-top:3px solid ' + urg.color + '">' +
+      '<div class="seal" style="background:' + urg.color + '"></div>' +
       '<div class="type-tag">' + w.type + '</div>' +
       '<div class="name">' + w.name + '</div>' +
       '<div class="vintage">' + (w.vintage || '') + '</div>' +
-      '<div class="window">Avant ' + w.drinkEnd + '</div>' +
+      '<div class="window" style="color:' + urg.color + '; font-weight:600;">Avant ' + (w.drinkEnd || '—') + '</div>' +
     '</div>';
   }
   row.innerHTML = html;
@@ -376,17 +402,18 @@ function renderCellarList(){
   var html = '';
   for(var i = 0; i < active.length; i++){
     var w = active[i];
-    var color = TYPE_COLORS[w.type] || '#5F5E5A';
+    var urg = getUrgency(w);
     var thumb = w.photo ? '<img class="thumb" src="' + w.photo + '">' : '<div class="thumb placeholder">🍷</div>';
     var priceTag = w.price ? '<span class="price-badge">~' + w.price + ' €</span>' : '';
 
-    html += '<div class="wine-card" style="border-left-color:' + color + '">' +
+    html += '<div class="wine-card" style="border-left-color:' + urg.color + '">' +
       thumb +
       '<div class="info">' +
         '<p class="name">' + w.name + '</p>' +
         '<p class="producer">' + (w.producer || '') + '</p>' +
         '<div class="meta">' +
           '<span class="vintage-badge">' + (w.vintage || '—') + '</span>' +
+          '<span class="status-badge" style="background:' + urg.color + '22; color:' + urg.color + '; border:1px solid ' + urg.color + '44;">' + urg.label + '</span>' +
           priceTag +
           '<span style="font-size:11px; color:var(--parchment-dim);">' + (w.region || '') + '</span>' +
           (w.quantity > 1 ? '<span style="font-size:11px; color:var(--parchment-dim);">× ' + w.quantity + '</span>' : '') +
@@ -450,7 +477,7 @@ function analyzePhoto(dataUrl) {
 
   var az = document.getElementById('photo-analysis-zone');
   az.innerHTML = '<img class="photo-preview" src="' + dataUrl + '">' +
-                 '<div class="ai-status"><span class="spinner"></span> Analyse de l\'étiquette et recherche d\'estimation du prix...</div>';
+                 '<div class="ai-status"><span class="spinner"></span> Analyse de l\'étiquette et estimation du prix...</div>';
 
   var base64Data = dataUrl.split(',')[1];
   
@@ -498,7 +525,6 @@ function analyzePhoto(dataUrl) {
   });
 }
 
-// Accord Mets-Vins basé sur le contenu REEL de la cave
 function findPairing() {
   var key = (geminiApiKey || localStorage.getItem('gemini_api_key') || '').trim();
   if (!key) {
@@ -603,13 +629,37 @@ function initApp() {
     document.getElementById('photo-input').click();
   });
 
+  // GESTION COMPRESSION PHOTO AVANT SAUVEGARDE
   document.getElementById('photo-input').addEventListener('change', function(e){
     var file = e.target.files[0];
     if(!file) return;
+    
     var reader = new FileReader();
     reader.onload = function(evt){
-      pendingPhoto = evt.target.result;
-      analyzePhoto(pendingPhoto);
+      var img = new Image();
+      img.onload = function(){
+        // Redimensionnement à max 600px pour préserver le localStorage
+        var canvas = document.createElement('canvas');
+        var maxDim = 600;
+        var width = img.width;
+        var height = img.height;
+        
+        if (width > height) {
+          if (width > maxDim) { height *= maxDim / width; width = maxDim; }
+        } else {
+          if (height > maxDim) { width *= maxDim / height; height = maxDim; }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Quality 70% JPEG
+        pendingPhoto = canvas.toDataURL('image/jpeg', 0.7);
+        analyzePhoto(pendingPhoto);
+      };
+      img.src = evt.target.result;
     };
     reader.readAsDataURL(file);
   });
@@ -629,7 +679,7 @@ function initApp() {
   updateHeaderSub();
   renderAll();
 
-  // Enregistrement du Service Worker pour PWA
+  // Enregistrement du Service Worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(function(err){
       console.log('ServiceWorker non enregistré: ', err);
