@@ -138,6 +138,7 @@
 </header>
 
 <main>
+  <!-- TAB CAVE -->
   <section id="tab-cave" class="active">
     <div id="priority-block" style="display:none;">
       <p style="font-size:12px; text-transform:uppercase; color:var(--parchment-dim);">À boire en priorité</p>
@@ -156,6 +157,7 @@
     <div id="cellar-list"></div>
   </section>
 
+  <!-- TAB AJOUTER -->
   <section id="tab-add">
     <div class="photo-zone" id="photo-zone">
       <svg viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="14" r="3.5"/></svg>
@@ -217,6 +219,7 @@
     </form>
   </section>
 
+  <!-- TAB ACCORDS -->
   <section id="tab-pairing">
     <p style="font-size:12px; text-transform:uppercase; color:var(--parchment-dim);">Accord mets-vins</p>
     <div class="field">
@@ -226,6 +229,7 @@
     <div id="pairing-results" style="margin-top:18px;"></div>
   </section>
 
+  <!-- TAB REGLAGES -->
   <section id="tab-settings">
     <p style="font-size:12px; text-transform:uppercase; color:var(--parchment-dim);">Configuration IA (Optionnelle)</p>
     <p style="font-size:13px; color:var(--parchment-dim); line-height:1.4;">Pour utiliser l'analyse photo, entrez une clé Google Gemini gratuite.</p>
@@ -435,8 +439,8 @@ function analyzePhoto(dataUrl) {
     }]
   };
 
-  // Point d'accès standardisé vers gemini-1.5-flash
-  fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + key, {
+  // Appel mis à jour avec gemini-3.6-flash
+  fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=' + key, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
