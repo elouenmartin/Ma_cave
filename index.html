@@ -19,11 +19,10 @@
     --wine:#7A1F2B;
     --wine-light:#A8394A;
     --gold:#C9A24B;
-    
-    /* Légende Couleurs de Maturité */
-    --seal-ready:#5C7A52; /* Vert : Bon à boire */
-    --seal-keep:#C99E2B;  /* Jaune : À garder */
-    --seal-urgent:#A83232;/* Rouge : À boire d'urgence */
+
+    --seal-ready:#5C7A52;
+    --seal-keep:#C99E2B;
+    --seal-urgent:#A83232;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   body{
@@ -37,7 +36,7 @@
   }
   header.app-header h1{ font-family:'Fraunces',serif; font-weight:600; font-size:22px; margin:0; }
   header.app-header p{ margin:2px 0 0; font-size:12px; color:var(--parchment-dim); }
-  
+
   main{padding:16px;}
   section{display:none;}
   section.active{display:block; animation:fadein .25s ease;}
@@ -70,6 +69,17 @@
   .btn.secondary{background:transparent; border:1px solid var(--cave-border); color:var(--parchment);}
   .btn.block{width:100%;}
 
+  .search-box{ position:relative; margin-bottom:14px; }
+  .search-box input{
+    width:100%; background:var(--cave-1); border:1px solid var(--cave-border); color:var(--parchment);
+    padding:11px 14px 11px 38px; border-radius:10px; font-size:14px; font-family:'Inter',sans-serif;
+  }
+  .search-box svg{ position:absolute; left:12px; top:50%; transform:translateY(-50%); width:16px; height:16px; stroke:var(--parchment-dim); fill:none; stroke-width:2; }
+  .search-box .clear-btn{
+    position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none;
+    color:var(--parchment-dim); font-size:16px; cursor:pointer; padding:4px 6px; display:none;
+  }
+
   .chips{display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:14px;}
   .chip{
     flex-shrink:0; padding:7px 14px; border-radius:20px; border:1px solid var(--cave-border);
@@ -100,6 +110,7 @@
   .wine-card .meta{display:flex; gap:8px; align-items:center; margin-top:6px; flex-wrap:wrap;}
   .wine-card .vintage-badge{ font-family:'IBM Plex Mono',monospace; font-size:11px; background:var(--cave-2); padding:2px 7px; border-radius:5px; color:var(--gold); }
   .wine-card .price-badge{ font-family:'IBM Plex Mono',monospace; font-size:11px; background:var(--cave-2); padding:2px 7px; border-radius:5px; color:var(--parchment); border:1px solid var(--cave-border); }
+  .wine-card .gift-badge{ font-size:11px; background:var(--cave-2); padding:2px 7px; border-radius:5px; color:var(--gold); border:1px solid var(--cave-border); }
   .wine-card .status-badge{ font-size:10.5px; padding:2px 7px; border-radius:5px; font-weight:600; }
   .wine-card .actions{display:flex; gap:6px; margin-top:8px;}
   .wine-card .actions button{ background:none; border:1px solid var(--cave-border); color:var(--parchment-dim); font-size:11px; padding:4px 9px; border-radius:6px; cursor:pointer; }
@@ -116,21 +127,16 @@
   .photo-zone{ border:1.5px dashed var(--cave-border); border-radius:12px; padding:24px 16px; text-align:center; margin-bottom:14px; cursor:pointer; }
   .photo-zone svg{width:30px; height:30px; stroke:var(--gold); fill:none; stroke-width:1.4; margin-bottom:8px;}
   .photo-preview{width:100%; max-height:200px; object-fit:cover; border-radius:12px; margin-bottom:10px;}
-  
+
   .ai-status{
     display:flex; align-items:center; justify-content:center; gap:10px;
     background:var(--cave-1); border:1px solid var(--cave-border); padding:12px;
     border-radius:8px; font-size:13px; color:var(--gold); margin-bottom:14px;
   }
 
-  .pairing-box {
-    background: var(--cave-1);
-    border: 1px solid var(--cave-border);
-    padding: 16px;
-    border-radius: 10px;
-    line-height: 1.5;
-    font-size: 14px;
-  }
+  .pairing-box{ background:var(--cave-1); border:1px solid var(--cave-border); padding:16px; border-radius:10px; line-height:1.5; font-size:14px; }
+
+  .settings-note{ font-size:13px; color:var(--parchment-dim); line-height:1.5; margin:0 0 14px; }
 
   .toast{
     position:fixed; bottom:90px; left:50%; transform:translateX(-50%);
@@ -156,8 +162,14 @@
   <!-- TAB CAVE -->
   <section id="tab-cave" class="active">
     <div id="priority-block" style="display:none;">
-      <p style="font-size:12px; text-transform:uppercase; color:var(--parchment-dim); margin-bottom:8px;">À boire d'urgence (Rouge)</p>
+      <p style="font-size:12px; text-transform:uppercase; color:var(--parchment-dim); margin-bottom:8px;">À boire d'urgence</p>
       <div class="priority-row" id="priority-row"></div>
+    </div>
+
+    <div class="search-box">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" id="search-input" placeholder="Rechercher un vin, une région, offert par...">
+      <button type="button" class="clear-btn" id="search-clear">✕</button>
     </div>
 
     <div class="chips" id="type-chips">
@@ -233,6 +245,10 @@
         </div>
       </div>
       <div class="field">
+        <label>Offert par (optionnel)</label>
+        <input type="text" id="f-offeredby" placeholder="Ex: Papa, Julie, Marc et Sophie...">
+      </div>
+      <div class="field">
         <label>Notes personnelles</label>
         <textarea id="f-notes" placeholder="Notes de dégustation, lieu d'achat..."></textarea>
       </div>
@@ -254,12 +270,18 @@
   <!-- TAB REGLAGES -->
   <section id="tab-settings">
     <p style="font-size:12px; text-transform:uppercase; color:var(--parchment-dim); margin-bottom:8px;">Configuration IA</p>
-    <p style="font-size:13px; color:var(--parchment-dim); line-height:1.4;">Entrez votre clé API Google Gemini pour activer la reconnaissance photo d'étiquettes, l'estimation des prix et la recommandation d'accords.</p>
-    <div class="field" style="margin-top:14px;">
+    <p class="settings-note">Entrez votre clé API Google Gemini (gratuite, sans carte bancaire, créée sur <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--gold);">aistudio.google.com</a>) pour activer la reconnaissance photo d'étiquettes et les accords mets-vins.</p>
+    <div class="field">
       <label>Clé API Google Gemini</label>
       <input type="password" id="cfg-gemini-key" placeholder="AIzaSy...">
     </div>
     <button class="btn block" id="save-settings-btn">Enregistrer la clé</button>
+
+    <p style="font-size:12px; text-transform:uppercase; color:var(--parchment-dim); margin:26px 0 8px;">Sauvegarde de la cave</p>
+    <p class="settings-note">Vos vins sont stockés uniquement sur cet appareil et dans ce navigateur. Si vous changez de téléphone, videz le cache du site, ou désinstallez l'appli, ces données seraient perdues sans sauvegarde. Téléchargez régulièrement un fichier de sauvegarde.</p>
+    <button class="btn secondary block" id="export-btn" style="margin-bottom:10px;">Télécharger une sauvegarde (JSON)</button>
+    <input type="file" accept="application/json" id="import-input" style="display:none;">
+    <button class="btn secondary block" id="import-btn">Restaurer depuis une sauvegarde</button>
   </section>
 </main>
 
@@ -285,31 +307,51 @@
 <div id="toast" class="toast"></div>
 
 <script>
-// --- GESTION STOCKAGE LOCAL ---
-function loadWines() {
-  try {
+// =====================================================================
+// CONFIGURATION
+// =====================================================================
+// Nom de modèle centralisé : à modifier ici seulement si Google en change
+// à nouveau le nom (gemini-1.5-flash a été définitivement arrêté mi-2026).
+var GEMINI_MODEL = 'gemini-3.5-flash';
+
+// =====================================================================
+// STOCKAGE LOCAL (persistance de la cave)
+// =====================================================================
+function loadWines(){
+  try{
     var raw = localStorage.getItem('macave_wines');
     return raw ? JSON.parse(raw) : [];
-  } catch(e) {
-    console.error("Erreur de chargement du localStorage", e);
+  }catch(e){
+    console.error('Erreur de chargement du localStorage', e);
     return [];
   }
 }
 
-function saveWines(data) {
-  try {
+function saveWines(data){
+  try{
     localStorage.setItem('macave_wines', JSON.stringify(data));
-  } catch(e) {
-    console.error("Erreur de sauvegarde dans localStorage", e);
+  }catch(e){
+    console.error('Erreur de sauvegarde dans localStorage', e);
     toast("Erreur d'enregistrement : mémoire locale saturée.");
   }
 }
 
+function getGeminiKey(){
+  return (geminiApiKey || '').trim();
+}
+
+// =====================================================================
+// ETAT GLOBAL
+// =====================================================================
 var wines = [];
 var currentTypeFilter = 'all';
+var currentSearchQuery = '';
 var geminiApiKey = (localStorage.getItem('gemini_api_key') || '').trim();
 var pendingPhoto = null;
 
+// =====================================================================
+// UTILITAIRES
+// =====================================================================
 function toast(msg){
   var t = document.getElementById('toast');
   t.textContent = msg;
@@ -317,37 +359,72 @@ function toast(msg){
   setTimeout(function(){ t.classList.remove('show'); }, 3500);
 }
 
-function updateHeaderSub(){
-  var active = wines.filter(function(w){ return !w.consumed; });
-  var n = active.reduce(function(s,w){ return s + (parseInt(w.quantity)||1); }, 0);
-  document.getElementById('header-sub').textContent = n === 0 ? "Votre cave est vide" : n + " bouteille" + (n > 1 ? 's' : '') + " en cave";
+function escapeHtml(s){
+  if(s === null || s === undefined) return '';
+  return String(s).replace(/[&<>"']/g, function(c){
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+  });
 }
 
-// --- SYSTEME DE CODE COULEUR DE MATURITÉ ---
+function normalizeTxt(s){
+  return (s || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function updateHeaderSub(){
+  var active = wines.filter(function(w){ return !w.consumed; });
+  var n = active.reduce(function(s,w){ return s + (parseInt(w.quantity) || 1); }, 0);
+  document.getElementById('header-sub').textContent = n === 0 ? 'Votre cave est vide' : n + ' bouteille' + (n > 1 ? 's' : '') + ' en cave';
+}
+
+// =====================================================================
+// MATURITÉ / URGENCE
+// =====================================================================
 function getUrgency(w){
   var currentYear = new Date().getFullYear();
   var start = parseInt(w.drinkStart) || null;
   var end = parseInt(w.drinkEnd) || null;
 
-  if (end && currentYear >= end) {
-    return { status: 'urgent', label: 'À boire d\'urgence', color: 'var(--seal-urgent)' };
+  if(end && currentYear >= end){
+    return { status:'urgent', label:"À boire d'urgence", color:'var(--seal-urgent)' };
   }
-  
-  if (start && currentYear < start) {
-    return { status: 'keep', label: 'À garder', color: 'var(--seal-keep)' };
+  if(start && currentYear < start){
+    return { status:'keep', label:'À garder', color:'var(--seal-keep)' };
   }
-
-  if (start && end && currentYear >= start && currentYear < end) {
-    return { status: 'ready', label: 'Bon à boire', color: 'var(--seal-ready)' };
+  if(start && end && currentYear >= start && currentYear < end){
+    return { status:'ready', label:'Bon à boire', color:'var(--seal-ready)' };
   }
-
-  if (start && !end && currentYear >= start) {
-    return { status: 'ready', label: 'Bon à boire', color: 'var(--seal-ready)' };
+  if(start && !end && currentYear >= start){
+    return { status:'ready', label:'Bon à boire', color:'var(--seal-ready)' };
   }
-
-  return { status: 'unknown', label: 'Garde non spécifiée', color: '#5F5E5A' };
+  return { status:'unknown', label:'Garde non spécifiée', color:'#5F5E5A' };
 }
 
+// =====================================================================
+// RECHERCHE ET FILTRAGE
+// =====================================================================
+function matchesSearch(w, query){
+  if(!query) return true;
+  var norm = normalizeTxt(query);
+  var haystack = normalizeTxt([
+    w.name, w.producer, w.region, w.notes, w.offeredBy, w.vintage, w.type
+  ].filter(Boolean).join(' '));
+  return haystack.indexOf(norm) !== -1;
+}
+
+function getFilteredWines(){
+  var active = wines.filter(function(w){ return !w.consumed; });
+  if(currentTypeFilter !== 'all'){
+    active = active.filter(function(w){ return w.type === currentTypeFilter; });
+  }
+  if(currentSearchQuery){
+    active = active.filter(function(w){ return matchesSearch(w, currentSearchQuery); });
+  }
+  return active;
+}
+
+// =====================================================================
+// RENDU
+// =====================================================================
 function renderAll(){
   renderPriority();
   renderCellarList();
@@ -355,25 +432,23 @@ function renderAll(){
 
 function renderPriority(){
   var active = wines.filter(function(w){ return !w.consumed; });
-  var urgentWines = active.filter(function(w){
-    return getUrgency(w).status === 'urgent';
-  }).slice(0,8);
-  
+  var urgentWines = active.filter(function(w){ return getUrgency(w).status === 'urgent'; }).slice(0,8);
+
   var block = document.getElementById('priority-block');
   var row = document.getElementById('priority-row');
   if(urgentWines.length === 0){ block.style.display = 'none'; return; }
   block.style.display = 'block';
-  
+
   var html = '';
   for(var i = 0; i < urgentWines.length; i++){
     var w = urgentWines[i];
     var urg = getUrgency(w);
     html += '<div class="priority-card" style="border-top:3px solid ' + urg.color + '">' +
       '<div class="seal" style="background:' + urg.color + '"></div>' +
-      '<div class="type-tag">' + w.type + '</div>' +
-      '<div class="name">' + w.name + '</div>' +
-      '<div class="vintage">' + (w.vintage || '') + '</div>' +
-      '<div class="window" style="color:' + urg.color + '; font-weight:600;">Avant ' + (w.drinkEnd || '—') + '</div>' +
+      '<div class="type-tag">' + escapeHtml(w.type) + '</div>' +
+      '<div class="name">' + escapeHtml(w.name) + '</div>' +
+      '<div class="vintage">' + escapeHtml(w.vintage || '') + '</div>' +
+      '<div class="window" style="color:' + urg.color + '; font-weight:600;">Avant ' + escapeHtml(w.drinkEnd || '—') + '</div>' +
     '</div>';
   }
   row.innerHTML = html;
@@ -381,13 +456,13 @@ function renderPriority(){
 
 function renderCellarList(){
   var container = document.getElementById('cellar-list');
-  var active = wines.filter(function(w){ return !w.consumed; });
-  if(currentTypeFilter !== 'all'){
-    active = active.filter(function(w){ return w.type === currentTypeFilter; });
-  }
+  var active = getFilteredWines();
 
   if(active.length === 0){
-    container.innerHTML = '<div class="empty"><div class="glyph">🍷</div><h3>Aucun vin dans cette catégorie</h3></div>';
+    var msg = currentSearchQuery
+      ? "Aucun vin ne correspond à « " + escapeHtml(currentSearchQuery) + " »"
+      : (wines.length === 0 ? 'Votre cave est vide' : 'Aucun vin dans cette catégorie');
+    container.innerHTML = '<div class="empty"><div class="glyph">🍷</div><h3>' + msg + '</h3></div>';
     return;
   }
 
@@ -396,18 +471,19 @@ function renderCellarList(){
     var w = active[i];
     var urg = getUrgency(w);
     var thumb = w.photo ? '<img class="thumb" src="' + w.photo + '">' : '<div class="thumb placeholder">🍷</div>';
-    var priceTag = w.price ? '<span class="price-badge">~' + w.price + ' €</span>' : '';
+    var priceTag = w.price ? '<span class="price-badge">~' + escapeHtml(w.price) + ' €</span>' : '';
+    var giftTag = w.offeredBy ? '<span class="gift-badge">🎁 ' + escapeHtml(w.offeredBy) + '</span>' : '';
 
     html += '<div class="wine-card" style="border-left-color:' + urg.color + '">' +
       thumb +
       '<div class="info">' +
-        '<p class="name">' + w.name + '</p>' +
-        '<p class="producer">' + (w.producer || '') + '</p>' +
+        '<p class="name">' + escapeHtml(w.name) + '</p>' +
+        '<p class="producer">' + escapeHtml(w.producer || '') + '</p>' +
         '<div class="meta">' +
-          '<span class="vintage-badge">' + (w.vintage || '—') + '</span>' +
+          '<span class="vintage-badge">' + escapeHtml(w.vintage || '—') + '</span>' +
           '<span class="status-badge" style="background:' + urg.color + '22; color:' + urg.color + '; border:1px solid ' + urg.color + '44;">' + urg.label + '</span>' +
-          priceTag +
-          '<span style="font-size:11px; color:var(--parchment-dim);">' + (w.region || '') + '</span>' +
+          priceTag + giftTag +
+          '<span style="font-size:11px; color:var(--parchment-dim);">' + escapeHtml(w.region || '') + '</span>' +
           (w.quantity > 1 ? '<span style="font-size:11px; color:var(--parchment-dim);">× ' + w.quantity + '</span>' : '') +
         '</div>' +
         '<div class="actions">' +
@@ -420,14 +496,14 @@ function renderCellarList(){
   container.innerHTML = html;
 }
 
+// =====================================================================
+// ACTIONS SUR LA CAVE
+// =====================================================================
 function markConsumed(id){
   for(var i = 0; i < wines.length; i++){
     if(wines[i].id === id){
-      if(wines[i].quantity > 1) {
-        wines[i].quantity -= 1;
-      } else {
-        wines[i].consumed = true;
-      }
+      if(wines[i].quantity > 1){ wines[i].quantity -= 1; }
+      else{ wines[i].consumed = true; }
       break;
     }
   }
@@ -451,41 +527,54 @@ function switchTab(tabId){
   var sections = document.querySelectorAll('section');
   for(var i = 0; i < sections.length; i++){ sections[i].classList.remove('active'); }
   document.getElementById(tabId).classList.add('active');
-  
+
   var btns = document.querySelectorAll('.tab-btn');
   for(var j = 0; j < btns.length; j++){
     btns[j].classList.toggle('active', btns[j].getAttribute('data-tab') === tabId);
   }
 }
 
-// --- INTELLIGENCE ARTIFICIELLE (GEMINI 1.5 FLASH API) ---
+// =====================================================================
+// GESTION DES ERREURS API GEMINI (message clair selon le code HTTP)
+// =====================================================================
+function friendlyGeminiError(status, rawMessage){
+  if(status === 400) return "Requête invalide. La clé API est peut-être mal copiée (espaces, retour à la ligne) : " + rawMessage;
+  if(status === 403) return "Accès refusé par Google. Vérifiez que la clé provient bien de aistudio.google.com/apikey et qu'elle n'a pas de restriction d'application : " + rawMessage;
+  if(status === 404) return "Modèle introuvable (" + GEMINI_MODEL + "). Google a peut-être de nouveau renommé ses modèles : " + rawMessage;
+  if(status === 429) return "Trop de requêtes pour le moment (quota gratuit dépassé). Réessayez dans une minute : " + rawMessage;
+  return 'Erreur Gemini (' + status + ') : ' + rawMessage;
+}
 
-function analyzePhoto(dataUrl) {
-  var key = (geminiApiKey || localStorage.getItem('gemini_api_key') || '').trim();
-  if (!key) {
+// =====================================================================
+// INTELLIGENCE ARTIFICIELLE (GEMINI)
+// =====================================================================
+function analyzePhoto(dataUrl){
+  var key = getGeminiKey();
+  if(!key){
     toast("Veuillez d'abord saisir votre clé API dans l'onglet Réglages.");
+    switchTab('tab-settings');
     return;
   }
 
   var az = document.getElementById('photo-analysis-zone');
   az.innerHTML = '<img class="photo-preview" src="' + dataUrl + '">' +
-                 '<div class="ai-status"><span class="spinner"></span> Analyse Gemini 1.5 en cours...</div>';
+                 '<div class="ai-status"><span class="spinner"></span> Analyse Gemini en cours...</div>';
 
   var base64Data = dataUrl.split(',')[1];
-  
-  var prompt = "Analyse cette étiquette de bouteille de vin ou cidre. Estime le prix moyen du marché en euros (€). Renvoie UNIQUEMENT un objet JSON valide avec ces clés précises: \"name\" (nom du vin), \"producer\" (producteur/domaine), \"vintage\" (millésime sous forme d'année ou null), \"type\" (uniquement une de ces valeurs: rouge, blanc, rose, champagne, cidre), \"region\" (région viticole), \"price\" (estimation moyenne du prix en euros sous forme de nombre ou null), \"drinkStart\" (année recommandée de début de garde, nombre ou null), \"drinkEnd\" (année recommandée de fin de garde, nombre ou null). Pas de balises markdown.";
+
+  var prompt = "Analyse cette étiquette de bouteille de vin ou cidre. Estime le prix moyen du marché en euros. Réponds avec un objet JSON ayant ces clés : name (nom du vin), producer (producteur/domaine ou null), vintage (année en chaîne ou null), type (une valeur parmi rouge, blanc, rose, champagne, cidre), region (région viticole ou null), price (nombre estimé en euros ou null), drinkStart (année de début de garde, nombre ou null), drinkEnd (année de fin de garde, nombre ou null).";
 
   var payload = {
     contents: [{
       parts: [
         { text: prompt },
-        { inlineData: { mimeType: "image/jpeg", data: base64Data } }
+        { inlineData: { mimeType: 'image/jpeg', data: base64Data } }
       ]
-    }]
+    }],
+    generationConfig: { responseMimeType: 'application/json' }
   };
 
-  // Endpoint mis à jour sur gemini-1.5-flash
-  var apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + key;
+  var apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + encodeURIComponent(key);
 
   fetch(apiUrl, {
     method: 'POST',
@@ -495,19 +584,19 @@ function analyzePhoto(dataUrl) {
   .then(function(res){
     if(!res.ok){
       return res.json().then(function(errData){
-        throw new Error(errData.error ? errData.error.message : "Erreur HTTP " + res.status);
+        var msg = errData.error ? errData.error.message : ('Erreur HTTP ' + res.status);
+        throw new Error(friendlyGeminiError(res.status, msg));
       });
     }
     return res.json();
   })
   .then(function(data){
-    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-      throw new Error("Réponse de l'IA invalide ou vide.");
+    if(!data.candidates || !data.candidates[0] || !data.candidates[0].content){
+      throw new Error("Réponse de l'IA invalide ou vide (la photo est peut-être trop floue ou l'étiquette illisible).");
     }
-    
+
     var text = data.candidates[0].content.parts[0].text.trim();
     text = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-    
     var parsed = JSON.parse(text);
 
     if(parsed.name) document.getElementById('f-name').value = parsed.name;
@@ -520,47 +609,48 @@ function analyzePhoto(dataUrl) {
     if(parsed.drinkEnd) document.getElementById('f-drinkend').value = parsed.drinkEnd;
 
     az.innerHTML = '<img class="photo-preview" src="' + dataUrl + '">';
-    toast("Analyse et prix estimé avec succès !");
+    toast('Analyse et estimation réussies — vérifiez les informations !');
   })
   .catch(function(err){
-    console.error("Erreur Gemini API:", err);
+    console.error('Erreur Gemini API (photo):', err);
     az.innerHTML = '<img class="photo-preview" src="' + dataUrl + '">';
-    alert("Erreur Gemini : " + err.message);
+    alert(err.message);
   });
 }
 
-function findPairing() {
-  var key = (geminiApiKey || localStorage.getItem('gemini_api_key') || '').trim();
-  if (!key) {
+function findPairing(){
+  var key = getGeminiKey();
+  if(!key){
     toast("Entrez votre clé API Gemini dans l'onglet Réglages pour utiliser cette fonction.");
+    switchTab('tab-settings');
     return;
   }
 
   var dish = document.getElementById('dish-input').value.trim();
-  if (!dish) {
-    toast("Veuillez indiquer un plat.");
+  if(!dish){
+    toast('Veuillez indiquer un plat.');
     return;
   }
 
   var activeWines = wines.filter(function(w){ return !w.consumed; });
-  if (activeWines.length === 0) {
+  if(activeWines.length === 0){
     document.getElementById('pairing-results').innerHTML = '<div class="pairing-box">Votre cave est vide ! Ajoutez des bouteilles pour que l\'IA puisse faire un accord.</div>';
     return;
   }
 
   var resDiv = document.getElementById('pairing-results');
-  resDiv.innerHTML = '<div class="ai-status"><span class="spinner"></span> Recherche du meilleur accord avec Gemini 1.5...</div>';
+  resDiv.innerHTML = '<div class="ai-status"><span class="spinner"></span> Recherche du meilleur accord...</div>';
 
   var caveSummary = activeWines.map(function(w){
-    return "- " + w.name + " (" + (w.vintage || 'N/C') + ", " + w.type + ", " + (w.region || 'Région inconnue') + ")";
-  }).join("\n");
+    return '- ' + w.name + ' (' + (w.vintage || 'N/C') + ', ' + w.type + ', ' + (w.region || 'région inconnue') + ')' + (w.offeredBy ? ' [offert par ' + w.offeredBy + ']' : '');
+  }).join('\n');
 
-  var prompt = "Voici le contenu actuel de ma cave à vin :\n" + caveSummary + "\n\n" +
-               "Je vais manger le plat suivant : \"" + dish + "\".\n" +
-               "Propose-moi le MEILLEUR accord en choisissant UNIQUEMENT parmi les bouteilles de ma cave ci-dessus. " +
-               "Explique brièvement pourquoi cet accord fonctionne et quelle bouteille ouvrir. Si aucun vin ne convient du tout, suggère le type de vin idéal à acheter.";
+  var prompt = 'Voici le contenu actuel de ma cave à vin :\n' + caveSummary + '\n\n' +
+               'Je vais manger le plat suivant : "' + dish + '".\n' +
+               'Propose-moi le MEILLEUR accord en choisissant UNIQUEMENT parmi les bouteilles de ma cave ci-dessus. ' +
+               'Explique brièvement pourquoi cet accord fonctionne et quelle bouteille ouvrir. Si aucun vin ne convient vraiment, dis-le clairement et suggère le type de vin idéal à acheter.';
 
-  var apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + key;
+  var apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + encodeURIComponent(key);
 
   fetch(apiUrl, {
     method: 'POST',
@@ -570,24 +660,66 @@ function findPairing() {
   .then(function(res){
     if(!res.ok){
       return res.json().then(function(errData){
-        throw new Error(errData.error ? errData.error.message : "Erreur HTTP " + res.status);
+        var msg = errData.error ? errData.error.message : ('Erreur HTTP ' + res.status);
+        throw new Error(friendlyGeminiError(res.status, msg));
       });
     }
     return res.json();
   })
   .then(function(data){
+    if(!data.candidates || !data.candidates[0] || !data.candidates[0].content){
+      throw new Error("Réponse de l'IA invalide ou vide.");
+    }
     var text = data.candidates[0].content.parts[0].text;
-    resDiv.innerHTML = '<div class="pairing-box">' + text.replace(/\n/g, '<br>') + '</div>';
+    var safe = escapeHtml(text).replace(/\n/g, '<br>');
+    resDiv.innerHTML = '<div class="pairing-box">' + safe + '</div>';
   })
   .catch(function(err){
-    console.error("Erreur Gemini API:", err);
-    resDiv.innerHTML = '<div class="pairing-box">Erreur lors de la recherche : ' + err.message + '</div>';
+    console.error('Erreur Gemini API (accord):', err);
+    resDiv.innerHTML = '<div class="pairing-box">' + escapeHtml(err.message) + '</div>';
   });
 }
 
-// --- INITIALISATION ---
+// =====================================================================
+// SAUVEGARDE / RESTAURATION (export-import JSON)
+// =====================================================================
+function exportData(){
+  var dataStr = JSON.stringify(wines, null, 2);
+  var blob = new Blob([dataStr], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'macavavin-sauvegarde-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('Sauvegarde téléchargée');
+}
 
-function initApp() {
+function importData(file){
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      var imported = JSON.parse(e.target.result);
+      if(!Array.isArray(imported)) throw new Error('le fichier ne contient pas une liste de vins valide.');
+      if(!confirm('Importer ' + imported.length + ' vin(s) ? Cela remplacera entièrement votre cave actuelle.')) return;
+      wines = imported;
+      saveWines(wines);
+      updateHeaderSub();
+      renderAll();
+      toast('Cave restaurée depuis la sauvegarde');
+    }catch(err){
+      alert('Fichier invalide : ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// =====================================================================
+// INITIALISATION
+// =====================================================================
+function initApp(){
   wines = loadWines();
 
   var tabBtns = document.querySelectorAll('.tab-btn');
@@ -607,6 +739,20 @@ function initApp() {
     });
   }
 
+  var searchInput = document.getElementById('search-input');
+  var searchClear = document.getElementById('search-clear');
+  searchInput.addEventListener('input', function(){
+    currentSearchQuery = this.value.trim();
+    searchClear.style.display = currentSearchQuery ? 'block' : 'none';
+    renderCellarList();
+  });
+  searchClear.addEventListener('click', function(){
+    searchInput.value = '';
+    currentSearchQuery = '';
+    searchClear.style.display = 'none';
+    renderCellarList();
+  });
+
   document.getElementById('wine-form').addEventListener('submit', function(e){
     e.preventDefault();
     var wine = {
@@ -620,6 +766,7 @@ function initApp() {
       quantity: parseInt(document.getElementById('f-quantity').value) || 1,
       drinkStart: parseInt(document.getElementById('f-drinkstart').value) || null,
       drinkEnd: parseInt(document.getElementById('f-drinkend').value) || null,
+      offeredBy: document.getElementById('f-offeredby').value.trim(),
       notes: document.getElementById('f-notes').value.trim(),
       photo: pendingPhoto,
       consumed: false
@@ -639,32 +786,32 @@ function initApp() {
     document.getElementById('photo-input').click();
   });
 
-  // REDIMENSIONNEMENT & COMPRESSION PHOTO AVANT SAUVEGARDE
   document.getElementById('photo-input').addEventListener('change', function(e){
     var file = e.target.files[0];
+    e.target.value = '';
     if(!file) return;
-    
+
     var reader = new FileReader();
     reader.onload = function(evt){
       var img = new Image();
       img.onload = function(){
         var canvas = document.createElement('canvas');
-        var maxDim = 600;
+        var maxDim = 700;
         var width = img.width;
         var height = img.height;
-        
-        if (width > height) {
-          if (width > maxDim) { height *= maxDim / width; width = maxDim; }
-        } else {
-          if (height > maxDim) { width *= maxDim / height; height = maxDim; }
+
+        if(width > height){
+          if(width > maxDim){ height *= maxDim / width; width = maxDim; }
+        }else{
+          if(height > maxDim){ width *= maxDim / height; height = maxDim; }
         }
-        
+
         canvas.width = width;
         canvas.height = height;
         var ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
-        
-        pendingPhoto = canvas.toDataURL('image/jpeg', 0.7);
+
+        pendingPhoto = canvas.toDataURL('image/jpeg', 0.75);
         analyzePhoto(pendingPhoto);
       };
       img.src = evt.target.result;
@@ -684,10 +831,20 @@ function initApp() {
   var keyInput = document.getElementById('cfg-gemini-key');
   if(keyInput && geminiApiKey) keyInput.value = geminiApiKey;
 
+  document.getElementById('export-btn').addEventListener('click', exportData);
+  document.getElementById('import-btn').addEventListener('click', function(){
+    document.getElementById('import-input').click();
+  });
+  document.getElementById('import-input').addEventListener('change', function(e){
+    var file = e.target.files[0];
+    e.target.value = '';
+    if(file) importData(file);
+  });
+
   updateHeaderSub();
   renderAll();
 
-  if ('serviceWorker' in navigator) {
+  if('serviceWorker' in navigator){
     navigator.serviceWorker.register('sw.js').catch(function(err){
       console.log('ServiceWorker non enregistré: ', err);
     });
