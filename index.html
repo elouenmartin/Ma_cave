@@ -259,29 +259,17 @@
 var memoryStore = {};
 
 function safeGetItem(key) {
-  try {
-    return localStorage.getItem(key);
-  } catch(e) {
-    return memoryStore[key] || null;
-  }
+  try { return localStorage.getItem(key); } catch(e) { return memoryStore[key] || null; }
 }
 
 function safeSetItem(key, value) {
-  try {
-    localStorage.setItem(key, value);
-  } catch(e) {
-    memoryStore[key] = value;
-  }
+  try { localStorage.setItem(key, value); } catch(e) { memoryStore[key] = value; }
 }
 
 function loadWines() {
   var raw = safeGetItem('macave_wines');
   if (!raw) return [];
-  try {
-    return JSON.parse(raw);
-  } catch(e) {
-    return [];
-  }
+  try { return JSON.parse(raw); } catch(e) { return []; }
 }
 
 function saveWines(data) {
@@ -479,13 +467,25 @@ function initApp() {
       pendingPhoto = evt.target.result;
       var az = document.getElementById('photo-analysis-zone');
       az.innerHTML = '<img class="photo-preview" src="' + pendingPhoto + '">';
+    };
+    reader.readAsDataURL(file);
+  });
 
-      if(!geminiApiKey){
-        toast('Image chargée.');
-        return;
-      }
+  document.getElementById('save-settings-btn').addEventListener('click', function(){
+    var val = document.getElementById('cfg-gemini-key').value.trim();
+    geminiApiKey = val;
+    safeSetItem('gemini_api_key', val);
+    toast('Clé enregistrée !');
+  });
 
-      az.innerHTML += '<div style="font-size:12px; color:var(--parchment-dim); margin-bottom:10px;"><span class="spinner"></span> Analyse par l\'IA...</div>';
-      
-      var base64Data = pendingPhoto.split(',')[1];
-      fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateC
+  var keyInput = document.getElementById('cfg-gemini-key');
+  if(keyInput && geminiApiKey) keyInput.value = geminiApiKey;
+
+  updateHeaderSub();
+  renderAll();
+}
+
+document.addEventListener('DOMContentLoaded', initApp);
+</script>
+</body>
+</html>
