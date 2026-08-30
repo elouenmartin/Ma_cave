@@ -93,8 +93,9 @@
   .wine-card .info{flex:1; min-width:0;}
   .wine-card .name{font-family:'Fraunces',serif; font-size:15px; margin:0;}
   .wine-card .producer{font-size:12px; color:var(--parchment-dim); margin:1px 0 0;}
-  .wine-card .meta{display:flex; gap:8px; align-items:center; margin-top:6px;}
+  .wine-card .meta{display:flex; gap:8px; align-items:center; margin-top:6px; flex-wrap:wrap;}
   .wine-card .vintage-badge{ font-family:'IBM Plex Mono',monospace; font-size:11px; background:var(--cave-2); padding:2px 7px; border-radius:5px; color:var(--gold); }
+  .wine-card .price-badge{ font-family:'IBM Plex Mono',monospace; font-size:11px; background:var(--cave-2); padding:2px 7px; border-radius:5px; color:var(--parchment); border:1px solid var(--cave-border); }
   .wine-card .actions{display:flex; gap:6px; margin-top:8px;}
   .wine-card .actions button{ background:none; border:1px solid var(--cave-border); color:var(--parchment-dim); font-size:11px; padding:4px 9px; border-radius:6px; cursor:pointer; }
 
@@ -181,15 +182,21 @@
           <input type="text" id="f-vintage" placeholder="2020">
         </div>
       </div>
-      <div class="field">
-        <label>Type</label>
-        <select id="f-type">
-          <option value="rouge">Rouge</option>
-          <option value="blanc">Blanc</option>
-          <option value="rose">Rosé</option>
-          <option value="champagne">Champagne</option>
-          <option value="cidre">Cidre</option>
-        </select>
+      <div class="field-row">
+        <div class="field">
+          <label>Type</label>
+          <select id="f-type">
+            <option value="rouge">Rouge</option>
+            <option value="blanc">Blanc</option>
+            <option value="rose">Rosé</option>
+            <option value="champagne">Champagne</option>
+            <option value="cidre">Cidre</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Prix estimé (€)</label>
+          <input type="number" id="f-price" step="0.01" placeholder="Ex: 25.00">
+        </div>
       </div>
       <div class="field-row">
         <div class="field">
@@ -232,7 +239,7 @@
   <!-- TAB REGLAGES -->
   <section id="tab-settings">
     <p style="font-size:12px; text-transform:uppercase; color:var(--parchment-dim);">Configuration IA (Optionnelle)</p>
-    <p style="font-size:13px; color:var(--parchment-dim); line-height:1.4;">Pour utiliser l'analyse photo, entrez une clé Google Gemini gratuite.</p>
+    <p style="font-size:13px; color:var(--parchment-dim); line-height:1.4;">Pour utiliser l'analyse photo et l'estimation de prix, entrez une clé Google Gemini gratuite.</p>
     <div class="field">
       <label>Clé API Google Gemini</label>
       <input type="password" id="cfg-gemini-key" placeholder="AIzaSy...">
@@ -360,7 +367,8 @@ function renderCellarList(){
     var w = active[i];
     var color = TYPE_COLORS[w.type] || '#5F5E5A';
     var thumb = w.photo ? '<img class="thumb" src="' + w.photo + '">' : '<div class="thumb placeholder">🍷</div>';
-    
+    var priceTag = w.price ? '<span class="price-badge">~' + w.price + ' €</span>' : '';
+
     html += '<div class="wine-card" style="border-left-color:' + color + '">' +
       thumb +
       '<div class="info">' +
@@ -368,6 +376,7 @@ function renderCellarList(){
         '<p class="producer">' + (w.producer || '') + '</p>' +
         '<div class="meta">' +
           '<span class="vintage-badge">' + (w.vintage || '—') + '</span>' +
+          priceTag +
           '<span style="font-size:11px; color:var(--parchment-dim);">' + (w.region || '') + '</span>' +
           (w.quantity > 1 ? '<span style="font-size:11px; color:var(--parchment-dim);">× ' + w.quantity + '</span>' : '') +
         '</div>' +
@@ -424,11 +433,11 @@ function analyzePhoto(dataUrl) {
 
   var az = document.getElementById('photo-analysis-zone');
   az.innerHTML = '<img class="photo-preview" src="' + dataUrl + '">' +
-                 '<div class="ai-status"><span class="spinner"></span> Analyse de l\'étiquette par l\'IA...</div>';
+                 '<div class="ai-status"><span class="spinner"></span> Analyse de l\'étiquette et recherche d\'estimation du prix...</div>';
 
   var base64Data = dataUrl.split(',')[1];
   
-  var prompt = "Analyse cette étiquette de bouteille de vin ou cidre. Renvoie UNIQUEMENT un objet JSON valide avec ces clés précises: \"name\" (nom du vin), \"producer\" (producteur/domaine), \"vintage\" (millésime sous forme d'année ou null), \"type\" (uniquement une de ces valeurs: rouge, blanc, rose, champagne, cidre), \"region\" (région viticole), \"drinkStart\" (année recommandée de début de garde, nombre ou null), \"drinkEnd\" (année recommandée de fin de garde, nombre ou null). Ne mets pas de balises de code markdown autour du JSON.";
+  var prompt = "Analyse cette étiquette de bouteille de vin ou cidre. Estimation également le prix moyen sur le marché actuel en euros (€). Renvoie UNIQUEMENT un objet JSON valide avec ces clés précises: \"name\" (nom du vin), \"producer\" (producteur/domaine), \"vintage\" (millésime sous forme d'année ou null), \"type\" (uniquement une de ces valeurs: rouge, blanc, rose, champagne, cidre), \"region\" (région viticole), \"price\" (estimation moyenne du prix en euros sous forme de nombre ou null), \"drinkStart\" (année recommandée de début de garde, nombre ou null), \"drinkEnd\" (année recommandée de fin de garde, nombre ou null). Ne mets pas de balises de code markdown autour du JSON.";
 
   var payload = {
     contents: [{
@@ -439,7 +448,6 @@ function analyzePhoto(dataUrl) {
     }]
   };
 
-  // Appel mis à jour avec gemini-3.6-flash
   fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=' + key, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -463,12 +471,13 @@ function analyzePhoto(dataUrl) {
     if(parsed.producer) document.getElementById('f-producer').value = parsed.producer;
     if(parsed.vintage) document.getElementById('f-vintage').value = parsed.vintage;
     if(parsed.type) document.getElementById('f-type').value = parsed.type;
+    if(parsed.price) document.getElementById('f-price').value = parsed.price;
     if(parsed.region) document.getElementById('f-region').value = parsed.region;
     if(parsed.drinkStart) document.getElementById('f-drinkstart').value = parsed.drinkStart;
     if(parsed.drinkEnd) document.getElementById('f-drinkend').value = parsed.drinkEnd;
 
     az.innerHTML = '<img class="photo-preview" src="' + dataUrl + '">';
-    toast("Étiquette analysée avec succès !");
+    toast("Étiquette analysée et prix estimé !");
   })
   .catch(function(err){
     console.error(err);
@@ -505,6 +514,7 @@ function initApp() {
       producer: document.getElementById('f-producer').value.trim(),
       vintage: document.getElementById('f-vintage').value.trim(),
       type: document.getElementById('f-type').value,
+      price: parseFloat(document.getElementById('f-price').value) || null,
       region: document.getElementById('f-region').value.trim(),
       quantity: parseInt(document.getElementById('f-quantity').value) || 1,
       drinkStart: parseInt(document.getElementById('f-drinkstart').value) || null,
