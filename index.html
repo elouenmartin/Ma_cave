@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Ma Cave à Vin</title>
+<title>Ma Cave à Vin (Macavavin)</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#141010">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
@@ -118,6 +120,15 @@
     border-radius:8px; font-size:13px; color:var(--gold); margin-bottom:14px;
   }
 
+  .pairing-box {
+    background: var(--cave-1);
+    border: 1px solid var(--cave-border);
+    padding: 16px;
+    border-radius: 10px;
+    line-height: 1.5;
+    font-size: 14px;
+  }
+
   .toast{
     position:fixed; bottom:90px; left:50%; transform:translateX(-50%);
     background:var(--cave-2); border:1px solid var(--cave-border); color:var(--parchment);
@@ -142,7 +153,7 @@
   <!-- TAB CAVE -->
   <section id="tab-cave" class="active">
     <div id="priority-block" style="display:none;">
-      <p style="font-size:12px; text-transform:uppercase; color:var(--parchment-dim);">À boire en priorité</p>
+      <p style="font-size:12px; text-transform:uppercase; color:var(--parchment-dim); margin-bottom:8px;">À boire en priorité</p>
       <div class="priority-row" id="priority-row"></div>
     </div>
 
@@ -162,14 +173,14 @@
   <section id="tab-add">
     <div class="photo-zone" id="photo-zone">
       <svg viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="14" r="3.5"/></svg>
-      <p>Prendre en photo l'étiquette pour remplissage auto</p>
+      <p>Prendre en photo l'étiquette pour analyse & estimation</p>
     </div>
     <input type="file" accept="image/*" capture="environment" id="photo-input" style="display:none;">
     <div id="photo-analysis-zone"></div>
 
     <form id="wine-form">
       <div class="field">
-        <label>Nom du vin</label>
+        <label>Nom du vin / Appellation</label>
         <input type="text" id="f-name" placeholder="Château Margaux" required>
       </div>
       <div class="field-row">
@@ -219,8 +230,8 @@
         </div>
       </div>
       <div class="field">
-        <label>Notes</label>
-        <textarea id="f-notes" placeholder="Notes de dégustation..."></textarea>
+        <label>Notes personnels</label>
+        <textarea id="f-notes" placeholder="Notes de dégustation, lieu d'achat..."></textarea>
       </div>
       <button type="submit" class="btn block">Ajouter à la cave</button>
     </form>
@@ -228,19 +239,20 @@
 
   <!-- TAB ACCORDS -->
   <section id="tab-pairing">
-    <p style="font-size:12px; text-transform:uppercase; color:var(--parchment-dim);">Accord mets-vins</p>
+    <p style="font-size:12px; text-transform:uppercase; color:var(--parchment-dim); margin-bottom:8px;">Accord mets-vins intelligent</p>
     <div class="field">
-      <textarea id="dish-input" rows="2" placeholder="Ex: Magret de canard au miel"></textarea>
+      <label>Qu'allez-vous manger ?</label>
+      <textarea id="dish-input" rows="2" placeholder="Ex: Magret de canard au miel, Côte de bœuf, Poisson grillé..."></textarea>
     </div>
-    <button class="btn block" id="find-pairing-btn">Trouver l'accord</button>
+    <button class="btn block" id="find-pairing-btn">Trouver la bouteille idéale dans ma cave</button>
     <div id="pairing-results" style="margin-top:18px;"></div>
   </section>
 
   <!-- TAB REGLAGES -->
   <section id="tab-settings">
-    <p style="font-size:12px; text-transform:uppercase; color:var(--parchment-dim);">Configuration IA (Optionnelle)</p>
-    <p style="font-size:13px; color:var(--parchment-dim); line-height:1.4;">Pour utiliser l'analyse photo et l'estimation de prix, entrez une clé Google Gemini gratuite.</p>
-    <div class="field">
+    <p style="font-size:12px; text-transform:uppercase; color:var(--parchment-dim); margin-bottom:8px;">Configuration IA</p>
+    <p style="font-size:13px; color:var(--parchment-dim); line-height:1.4;">Entrez votre clé API Google Gemini pour activer la reconnaissance photo d'étiquettes, l'estimation des prix et la recommandation d'accords.</p>
+    <div class="field" style="margin-top:14px;">
       <label>Clé API Google Gemini</label>
       <input type="password" id="cfg-gemini-key" placeholder="AIzaSy...">
     </div>
@@ -270,29 +282,28 @@
 <div id="toast" class="toast"></div>
 
 <script>
-var memoryStore = {};
-
-function safeGetItem(key) {
-  try { return localStorage.getItem(key); } catch(e) { return memoryStore[key] || null; }
-}
-
-function safeSetItem(key, value) {
-  try { localStorage.setItem(key, value); } catch(e) { memoryStore[key] = value; }
-}
-
+// --- GESTION STOCKAGE LOCAL (PERSISTANT) ---
 function loadWines() {
-  var raw = safeGetItem('macave_wines');
-  if (!raw) return [];
-  try { return JSON.parse(raw); } catch(e) { return []; }
+  try {
+    var raw = localStorage.getItem('macave_wines');
+    return raw ? JSON.parse(raw) : [];
+  } catch(e) {
+    console.error("Erreur de chargement du localStorage", e);
+    return [];
+  }
 }
 
 function saveWines(data) {
-  safeSetItem('macave_wines', JSON.stringify(data));
+  try {
+    localStorage.setItem('macave_wines', JSON.stringify(data));
+  } catch(e) {
+    console.error("Erreur de sauvegarde dans localStorage", e);
+  }
 }
 
 var wines = [];
 var currentTypeFilter = 'all';
-var geminiApiKey = (safeGetItem('gemini_api_key') || '').trim();
+var geminiApiKey = (localStorage.getItem('gemini_api_key') || '').trim();
 var pendingPhoto = null;
 
 var TYPE_COLORS = {rouge:'#7A1F2B', blanc:'#D8C87B', rose:'#D98A93', champagne:'#C9A24B', cidre:'#9CAE70'};
@@ -358,7 +369,7 @@ function renderCellarList(){
   }
 
   if(active.length === 0){
-    container.innerHTML = '<div class="empty"><div class="glyph">🍷</div><h3>Aucun vin trouvé</h3></div>';
+    container.innerHTML = '<div class="empty"><div class="glyph">🍷</div><h3>Aucun vin dans cette catégorie</h3></div>';
     return;
   }
 
@@ -393,23 +404,27 @@ function renderCellarList(){
 function markConsumed(id){
   for(var i = 0; i < wines.length; i++){
     if(wines[i].id === id){
-      wines[i].consumed = true;
+      if(wines[i].quantity > 1) {
+        wines[i].quantity -= 1;
+      } else {
+        wines[i].consumed = true;
+      }
       break;
     }
   }
   saveWines(wines);
   updateHeaderSub();
   renderAll();
-  toast('Bouteille marquée comme bue');
+  toast('Cave mise à jour !');
 }
 
 function deleteWine(id){
-  if(confirm('Supprimer cette bouteille ?')){
+  if(confirm('Supprimer cette bouteille de la cave ?')){
     wines = wines.filter(function(w){ return w.id !== id; });
     saveWines(wines);
     updateHeaderSub();
     renderAll();
-    toast('Vin supprimé');
+    toast('Bouteille supprimée');
   }
 }
 
@@ -424,10 +439,12 @@ function switchTab(tabId){
   }
 }
 
+// --- INTELLIGENCE ARTIFICIELLE (GEMINI API) ---
+
 function analyzePhoto(dataUrl) {
-  var key = (geminiApiKey || safeGetItem('gemini_api_key') || '').trim();
+  var key = (geminiApiKey || localStorage.getItem('gemini_api_key') || '').trim();
   if (!key) {
-    toast("Entrez d'abord votre clé API Gemini dans Réglages");
+    toast("Entrez d'abord votre clé API Gemini dans l'onglet Réglages");
     return;
   }
 
@@ -437,7 +454,7 @@ function analyzePhoto(dataUrl) {
 
   var base64Data = dataUrl.split(',')[1];
   
-  var prompt = "Analyse cette étiquette de bouteille de vin ou cidre. Estimation également le prix moyen sur le marché actuel en euros (€). Renvoie UNIQUEMENT un objet JSON valide avec ces clés précises: \"name\" (nom du vin), \"producer\" (producteur/domaine), \"vintage\" (millésime sous forme d'année ou null), \"type\" (uniquement une de ces valeurs: rouge, blanc, rose, champagne, cidre), \"region\" (région viticole), \"price\" (estimation moyenne du prix en euros sous forme de nombre ou null), \"drinkStart\" (année recommandée de début de garde, nombre ou null), \"drinkEnd\" (année recommandée de fin de garde, nombre ou null). Ne mets pas de balises de code markdown autour du JSON.";
+  var prompt = "Analyse cette étiquette de bouteille de vin ou cidre. Estime le prix moyen du marché en euros (€). Renvoie UNIQUEMENT un objet JSON valide avec ces clés précises: \"name\" (nom du vin), \"producer\" (producteur/domaine), \"vintage\" (millésime sous forme d'année ou null), \"type\" (uniquement une de ces valeurs: rouge, blanc, rose, champagne, cidre), \"region\" (région viticole), \"price\" (estimation moyenne du prix en euros sous forme de nombre ou null), \"drinkStart\" (année recommandée de début de garde, nombre ou null), \"drinkEnd\" (année recommandée de fin de garde, nombre ou null). Ne mets pas de balises markdown ```json.";
 
   var payload = {
     contents: [{
@@ -448,18 +465,13 @@ function analyzePhoto(dataUrl) {
     }]
   };
 
-  fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=' + key, {
+  fetch('[https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=](https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=)' + key, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   })
   .then(function(res){
-    if(!res.ok){
-      return res.json().then(function(errData){
-        var errMsg = (errData && errData.error && errData.error.message) ? errData.error.message : ("Erreur HTTP " + res.status);
-        throw new Error(errMsg);
-      });
-    }
+    if(!res.ok){ throw new Error("Erreur HTTP " + res.status); }
     return res.json();
   })
   .then(function(data){
@@ -477,14 +489,67 @@ function analyzePhoto(dataUrl) {
     if(parsed.drinkEnd) document.getElementById('f-drinkend').value = parsed.drinkEnd;
 
     az.innerHTML = '<img class="photo-preview" src="' + dataUrl + '">';
-    toast("Étiquette analysée et prix estimé !");
+    toast("Analyse et prix estimé avec succès !");
   })
   .catch(function(err){
     console.error(err);
     az.innerHTML = '<img class="photo-preview" src="' + dataUrl + '">';
-    toast("Erreur d'analyse : " + err.message);
+    toast("Erreur lors de l'analyse : vérifiez la clé API.");
   });
 }
+
+// Accord Mets-Vins basé sur le contenu REEL de la cave
+function findPairing() {
+  var key = (geminiApiKey || localStorage.getItem('gemini_api_key') || '').trim();
+  if (!key) {
+    toast("Entrez votre clé API Gemini dans l'onglet Réglages pour utiliser cette fonction.");
+    return;
+  }
+
+  var dish = document.getElementById('dish-input').value.trim();
+  if (!dish) {
+    toast("Veuillez indiquer un plat.");
+    return;
+  }
+
+  var activeWines = wines.filter(function(w){ return !w.consumed; });
+  if (activeWines.length === 0) {
+    document.getElementById('pairing-results').innerHTML = '<div class="pairing-box">Votre cave est vide ! Ajoutez des bouteilles pour que l\'IA puisse faire un accord.</div>';
+    return;
+  }
+
+  var resDiv = document.getElementById('pairing-results');
+  resDiv.innerHTML = '<div class="ai-status"><span class="spinner"></span> Analyse de votre cave pour trouver le meilleur accord...</div>';
+
+  var caveSummary = activeWines.map(function(w){
+    return "- " + w.name + " (" + (w.vintage || 'N/C') + ", " + w.type + ", " + (w.region || 'Région inconnue') + ")";
+  }).join("\n");
+
+  var prompt = "Voici le contenu actuel de ma cave à vin :\n" + caveSummary + "\n\n" +
+               "Je vais manger le plat suivant : \"" + dish + "\".\n" +
+               "Propose-moi le MEILLEUR accord en choisissant UNIQUEMENT parmi les bouteilles de ma cave ci-dessus. " +
+               "Explique brièvement pourquoi cet accord fonctionne et quelle bouteille ouvrir. Si aucun vin ne convient du tout, suggère le type de vin idéal à acheter.";
+
+  fetch('[https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=](https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=)' + key, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+  })
+  .then(function(res){
+    if(!res.ok){ throw new Error("Erreur HTTP " + res.status); }
+    return res.json();
+  })
+  .then(function(data){
+    var text = data.candidates[0].content.parts[0].text;
+    resDiv.innerHTML = '<div class="pairing-box">' + text.replace(/\n/g, '<br>') + '</div>';
+  })
+  .catch(function(err){
+    console.error(err);
+    resDiv.innerHTML = '<div class="pairing-box">Erreur lors de la recherche d\'accord. Vérifiez votre clé API.</div>';
+  });
+}
+
+// --- INITIALISATION ---
 
 function initApp() {
   wines = loadWines();
@@ -530,7 +595,7 @@ function initApp() {
     document.getElementById('photo-analysis-zone').innerHTML = '';
     updateHeaderSub();
     renderAll();
-    toast('Vin ajouté !');
+    toast('Vin ajouté à la cave !');
     switchTab('tab-cave');
   });
 
@@ -549,11 +614,13 @@ function initApp() {
     reader.readAsDataURL(file);
   });
 
+  document.getElementById('find-pairing-btn').addEventListener('click', findPairing);
+
   document.getElementById('save-settings-btn').addEventListener('click', function(){
     var val = document.getElementById('cfg-gemini-key').value.trim();
     geminiApiKey = val;
-    safeSetItem('gemini_api_key', val);
-    toast('Clé enregistrée !');
+    localStorage.setItem('gemini_api_key', val);
+    toast('Clé API enregistrée !');
   });
 
   var keyInput = document.getElementById('cfg-gemini-key');
@@ -561,6 +628,13 @@ function initApp() {
 
   updateHeaderSub();
   renderAll();
+
+  // Enregistrement du Service Worker pour PWA
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(function(err){
+      console.log('ServiceWorker non enregistré: ', err);
+    });
+  }
 }
 
 document.addEventListener('DOMContentLoaded', initApp);
