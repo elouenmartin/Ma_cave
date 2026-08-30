@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ma Cave à Vin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+--cave-0:#141010;
+--cave-1:#1E1817;
+--cave-2:#2A2220;
+--cave-border:#3C332F;
+--parchment:#EFE6D6;
+--parchment-dim:#B7AB97;
+--wine:#7A1F2B;
+--wine-light:#A8394A;
+--gold:#C9A24B;
+--seal-ok:#5C7A52;
+--seal-soon:#C9822B;
+--seal-urgent:#A83232;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+body{
+margin:0; background:var(--cave-0); color:var(--parchment);
+font-family:'Inter',sans-serif; padding-bottom:80px; min-height:100vh;
+}
+header.app-header{
+position:sticky; top:0; z-index:20; background:var(--cave-0);
+border-bottom:1px solid var(--cave-border); padding:18px 20px 14px;
+display:flex; justify-content:space-between; align-items:center;
+}
+header.app-header h1{ font-family:'Fraunces',serif; font-weight:600; font-size:22px; margin:0; }
+header.app-header p{ margin:2px 0 0; font-size:12px; color:var(--parchment-dim); }
+
+main{padding:16px;}
+section{display:none;}
+section.active{display:block; animation:fadein .25s ease;}
+@keyframes fadein{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+
+nav.tabbar{
+position:fixed; bottom:0; left:0; right:0; z-index:30;
+display:flex; background:var(--cave-1); border-top:1px solid var(--cave-border);
+padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+}
+nav.tabbar button{
+flex:1; background:none; border:none; color:var(--parchment-dim);
+font-family:'Inter',sans-serif; font-size:11px; padding:8px 2px 4px;
+display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer;
+}
+nav.tabbar button svg{width:22px; height:22px; stroke:var(--parchment-dim); fill:none; stroke-width:1.6;}
+nav.tabbar button.active{color:var(--gold);}
+nav.tabbar button.active svg{stroke:var(--gold);}
+
+.empty{ text-align:center; padding:50px 20px; color:var(--parchment-dim); }
+.empty .glyph{ font-size:34px; margin-bottom:10px; opacity:.6; }
+.empty h3{ font-family:'Fraunces',serif; color:var(--parchment); font-weight:500; margin:0 0 6px; }
+
+.btn{
+display:inline-flex; align-items:center; justify-content:center; gap:6px;
+background:var(--wine); color:var(--parchment); border:none;
+padding:12px 18px; border-radius:8px; font-size:14px; font-weight:600;
+font-family:'Inter',sans-serif; cursor:pointer;
+}
+.btn.secondary{background:transparent; border:1px solid var(--cave-border); color:var(--parchment);}
+.btn.block{width:100%;}
+
+.chips{display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:14px;}
+.chip{
+flex-shrink:0; padding:7px 14px; border-radius:20px; border:1px solid var(--cave-border);
+font-size:12.5px; color:var(--parchment-dim); background:var(--cave-1); cursor:pointer;
+}
+.chip.active{background:var(--gold); color:#3A2E10; border-color:var(--gold); font-weight:600;}
+
+.priority-row{display:flex; gap:10px; overflow-x:auto; padding-bottom:8px; margin-bottom:18px;}
+.priority-card{
+flex-shrink:0; width:150px; background:var(--cave-1); border:1px solid var(--cave-border);
+border-radius:10px; padding:10px; position:relative;
+}
+.seal{ position:absolute; top:8px; right:8px; width:11px; height:11px; border-radius:50%; }
+.priority-card .type-tag{font-size:10px; color:var(--parchment-dim); text-transform:uppercase;}
+.priority-card .name{font-family:'Fraunces',serif; font-size:14px; margin:4px 0 2px;}
+.priority-card .vintage{font-size:11px; color:var(--gold);}
+.priority-card .window{font-size:10.5px; color:var(--parchment-dim); margin-top:6px;}
+
+.wine-card{
+display:flex; gap:12px; background:var(--cave-1); border:1px solid var(--cave-border);
+border-left-width:4px; border-radius:10px; padding:12px; margin-bottom:10px;
+}
+.wine-card .thumb{ width:52px; height:52px; border-radius:8px; object-fit:cover; background:var(--cave-2); flex-shrink:0; }
+.wine-card .thumb.placeholder{display:flex; align-items:center; justify-content:center; font-size:20px;}
+.wine-card .info{flex:1; min-width:0;}
+.wine-card .name{font-family:'Fraunces',serif; font-size:15px; margin:0;}
+.wine-card .producer{font-size:12px; color:var(--parchment-dim); margin:1px 0 0;}
+.wine-card .meta{display:flex; gap:8px; align-items:center; margin-top:6px;}
+.wine-card .vintage-badge{ font-family:'IBM Plex Mono',monospace; font-size:11px; background:var(--cave-2); padding:2px 7px; border-radius:5px; color:var(--gold); }
+.wine-card .actions{display:flex; gap:6px; margin-top:8px;}
+.wine-card .actions button{ background:none; border:1px solid var(--cave-border); color:var(--parchment-dim); font-size:11px; padding:4px 9px; border-radius:6px; cursor:pointer; }
+
+form .field{margin-bottom:14px;}
+form label{display:block; font-size:12px; color:var(--parchment-dim); margin-bottom:5px;}
+form input, form select, form textarea{
+width:100%; background:var(--cave-1); border:1px solid var(--cave-border); color:var(--parchment);
+padding:11px 12px; border-radius:8px; font-size:14px; font-family:'Inter',sans-serif;
+}
+.field-row{display:flex; gap:10px;}
+.field-row .field{flex:1;}
+
+.photo-zone{ border:1.5px dashed var(--cave-border); border-radius:12px; padding:24px 16px; text-align:center; margin-bottom:18px; cursor:pointer; }
+.photo-zone svg{width:30px; height:30px; stroke:var(--gold); fill:none; stroke-width:1.4; margin-bottom:8px;}
+.photo-preview{width:100%; max-height:220px; object-fit:cover; border-radius:12px; margin-bottom:14px;}
+
+.toast{
+position:fixed; bottom:90px; left:50%; transform:translateX(-50%);
+background:var(--cave-2); border:1px solid var(--cave-border); color:var(--parchment);
+padding:10px 16px; border-radius:8px; font-size:13px; z-index:50; opacity:0; transition:opacity .2s; pointer-events:none;
+}
+.toast.show{opacity:1;}
+.spinner{width:16px; height:16px; border-radius:50%; border:2px solid var(--cave-border); border-top-color:var(--gold); animation:spin .8s linear infinite; display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+<div>
+<h1 id="header-title">Ma cave à vin</h1>
+<p id="header-sub">Chargement...</p>
+</div>
+</header>
+
+<main>
+<!-- TAB CAVE -->
+<section id="tab-cave" class="active">
+<div id="priority-block" style="display:none;">
+<p style="font-size:12px; text-transform:uppercase; color:var(--parchment-dim);">À boire en priorité</p>
+<div class="priority-row" id="priority-row"></div>
+</div>
+
+<div class="chips" id="type-chips">
+<div class="chip active" data-type="all">Tous</div>
+<div class="chip" data-type="rouge">Rouge</div>
+<div class="chip" data-type="blanc">Blanc</div>
+<div class="chip" data-type="rose">Rosé</div>
+<div class="chip" data-type="champagne">Champagne</div>
+<div class="chip" data-type="cidre">Cidre</div>
+</div>
+
+<div id="cellar-list"></div>
+</section>
+
+<!-- TAB AJOUTER -->
+<section id="tab-add">
+<div class="photo-zone" id="photo-zone">
+<svg viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="14" r="3.5"/></svg>
+<p>Prendre en photo l'étiquette pour remplissage auto</p>
+</div>
+<input type="file" accept="image/*" capture="environment" id="photo-input" style="display:none;">
+<div id="photo-analysis-zone"></div>
+
+<form id="wine-form">
+<div class="field">
+<label>Nom du vin</label>
+<input type="text" id="f-name" placeholder="Château Margaux" required>
+</div>
+<div class="field-row">
+<div class="field">
+<label>Producteur</label>
+<input type="text" id="f-producer" placeholder="Domaine...">
+</div>
+<div class="field">
+<label>Millésime</label>
+<input type="text" id="f-vintage" placeholder="2020">
+</div>
+</div>
+<div class="field">
+<label>Type</label>
+<select id="f-type">
+<option value="rouge">Rouge</option>
+<option value="blanc">Blanc</option>
+<option value="rose">Rosé</option>
+<option value="champagne">Champagne</option>
+<option value="cidre">Cidre</option>
+</select>
+</div>
+<div class="field-row">
+<div class="field">
+<label>Région</label>
+<input type="text" id="f-region" placeholder="Bordeaux...">
+</div>
+<div class="field">
+<label>Quantité</label>
+<input type="number" id="f-quantity" value="1" min="1">
+</div>
+</div>
+<div class="field-row">
+<div class="field">
+<label>À boire dès</label>
+<input type="number" id="f-drinkstart" placeholder="2024">
+</div>
+<div class="field">
+<label>À boire avant</label>
+<input type="number" id="f-drinkend" placeholder="2028">
+</div>
+</div>
+<div class="field">
+<label>Notes</label>
+<textarea id="f-notes" placeholder="Notes de dégustation..."></textarea>
+</div>
+<button type="submit" class="btn block">Ajouter à la cave</button>
+</form>
+</section>
+
+<!-- TAB ACCORDS -->
+<section id="tab-pairing">
+<p style="font-size:12px; text-transform:uppercase; color:var(--parchment-dim);">Accord mets-vins</p>
+<div class="field">
+<textarea id="dish-input" rows="2" placeholder="Ex: Magret de canard au miel"></textarea>
+</div>
+<button class="btn block" id="find-pairing-btn">Trouver l'accord</button>
+<div id="pairing-results" style="margin-top:18px;"></div>
+</section>
+
+<!-- TAB REGLAGES -->
+<section id="tab-settings">
+<p style="font-size:12px; text-transform:uppercase; color:var(--parchment-dim);">Configuration IA (Optionnelle)</p>
+<p style="font-size:13px; color:var(--parchment-dim); line-height:1.4;">Pour activer l'analyse de photo par IA et les accords avancés 100% gratuitement, entrez une clé Google Gemini (obtenable gratuitement sur AI Studio).</p>
+<div class="field">
+<label>Clé API Google Gemini</label>
+<input type="password" id="cfg-gemini-key" placeholder="AIzaSy...">
+</div>
+<button class="btn block" id="save-settings-btn">Enregistrer la clé</button>
+</section>
+</main>
+
+<nav class="tabbar">
+<button class="tab-btn active" data-tab="tab-cave">
+<svg viewBox="0 0 24 24"><path d="M8 2v6l-4 8a3 3 0 0 0 3 4h10a3 3 0 0 0 3-4l-4-8V2"/><path d="M6 15h12"/></svg>
+Ma cave
+</button>
+<button class="tab-btn" data-tab="tab-add">
+<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+Ajouter
+</button>
+<button class="tab-btn" data-tab="tab-pairing">
+<svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+Accords
+</button>
+<button class="tab-btn" data-tab="tab-settings">
+<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+Réglages
+</button>
+</nav>
+
+<div id="toast" class="toast"></div>
+
+<script>
+function loadWines() {
+try {
+const raw = localStorage.getItem('macave_wines');
+return raw ? JSON.parse(raw) : [];
+} catch(e) { return []; }
+}
+
+function saveWines(data) {
+try { localStorage.setItem('macave_wines', JSON.stringify(data)); } catch(e){}
+}
+
+let wines = loadWines();
+let currentTypeFilter = 'all';
+let geminiApiKey = localStorage.getItem('gemini_api_key') || '';
+let pendingPhoto = null;
+
+const TYPE_COLORS = {rouge:'#7A1F2B', blanc:'#D8C87B', rose:'#D98A93', champagne:'#C9A24B', cidre:'#9CAE70'};
+
+function toast(msg){
+const t = document.getElementById('toast');
+t.textContent = msg;
+t.classList.add('show');
+setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+function updateHeaderSub(){
+const active = wines.filter(w=>!w.consumed);
+const n = active.reduce((s,w)=>s+(parseInt(w.quantity)||1),0);
+document.getElementById('header-sub').textContent = n === 0 ? "Votre cave est vide" : ${n} bouteille${n&gt;1?'s':''} en cave;
+}
+
+function getUrgency(w){
+if(!w.drinkStart && !w.drinkEnd) return {status:'unknown', color:'#5F5E5A'};
+const y = new Date().getFullYear();
+if(w.drinkStart && y < w.drinkStart) return {status:'wait', color:'var(--seal-ok)'};
+if(w.drinkEnd && y > w.drinkEnd) return {status:'overdue', color:'var(--seal-urgent)'};
+if(w.drinkEnd && (w.drinkEnd - y) <= 1) return {status:'soon', color:'var(--seal-soon)'};
+return {status:'ok', color:'var(--seal-ok)'};
+}
+
+function renderAll(){
+renderPriority();
+renderCellarList();
+}
+
+function renderPriority(){
+const active = wines.filter(w=>!w.consumed && w.drinkEnd);
+const top = active.filter(w=>{ const u = getUrgency(w); return u.status==='overdue'||u.status==='soon'; }).slice(0,8);
+const block = document.getElementById('priority-block');
+const row = document.getElementById('priority-row');
+if(top.length === 0){ block.style.display='none'; return; }
+block.style.display='block';
+row.innerHTML = top.map(w=>&lt;div class="priority-card"&gt; &lt;div class="seal" style="background:${getUrgency(w).color}"></div>
+<div class="type-tag">${w.type}&lt;/div&gt; &lt;div class="name"&gt;${w.name}</div>
+<div class="vintage">${w.vintage||''}&lt;/div&gt; &lt;div class="window"&gt;Avant ${w.drinkEnd}</div>
+</div>
+`).join('');
+}
+
+function renderCellarList(){
+const container = document.getElementById('cellar-list');
+let active = wines.filter(w=>!w.consumed);
+if(currentTypeFilter !== 'all') active = active.filter(w=>w.type===currentTypeFilter);
+
+if(active.length === 0){
+container.innerHTML = <div class="empty"&gt;&lt;div class="glyph"&gt;🍷&lt;/div&gt;&lt;h3&gt;Aucun vin trouvé&lt;/h3&gt;&lt;/div>;
+return;
+}
+
+container.innerHTML = active.map(w=>{
+const color = TYPE_COLORS[w.type] || '#5F5E5A';
+const thumb = w.photo ? <img class="thumb" src="${w.photo}">:<div class="thumb placeholder">🍷</div>; return<div class="wine-card" style="border-left-color:{thumb}
+<div class="info">
+<p class="name">{w.producer||''}</p>
+<div class="meta">
+<span class="vintage-badge">{w.region||''}</span>
+latex
+{w.quantity &gt; 1 ? `<span style="font-size:11px; color:var(--parchment-dim);"&gt;× 
+
+{w.quantity}</span>: ''} &lt;/div&gt; &lt;div class="actions"&gt; &lt;button onclick="markConsumed('${w.id}')">Bu</button>
+<button onclick="deleteWine('${w.id}')"&gt;Supprimer&lt;/button&gt; &lt;/div&gt; &lt;/div&gt; &lt;/div>;
+}).join('');
+}
+
+function markConsumed(id){
+const w = wines.find(item=>item.id===id);
+if(!w) return;
+w.consumed = true;
+saveWines(wines);
+updateHeaderSub();
+renderAll();
+toast('Bouteille marquée comme bue');
+}
+
+function deleteWine(id){
+if(confirm('Supprimer cette bouteille ?')){
+wines = wines.filter(w=>w.id !== id);
+saveWines(wines);
+updateHeaderSub();
+renderAll();
+toast('Vin supprimé');
+}
+}
+
+function switchTab(tabId){
+document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
+document.getElementById(tabId).classList.add('active');
+document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tabId));
+}
+document.querySelectorAll('.tab-btn').forEach(b=>b.addEventListener('click', ()=>switchTab(b.dataset.tab)));
+
+document.querySelectorAll('.chip').forEach(chip=>{
+chip.addEventListener('click', ()=>{
+document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+chip.classList.add('active');
+currentTypeFilter = chip.dataset.type;
+renderCellarList();
+});
+});
+
+document.getElementById('wine-form').addEventListener('submit', (e)=>{
+e.preventDefault();
+const wine = {
+id: 'w_' + Date.now(),
+name: document.getElementById('f-name').value.trim(),
+producer: document.getElementById('f-producer').value.trim(),
+vintage: document.getElementById('f-vintage').value.trim(),
+type: document.getElementById('f-type').value,
+region: document.getElementById('f-region').value.trim(),
+quantity: parseInt(document.getElementById('f-quantity').value) || 1,
+drinkStart: parseInt(document.getElementById('f-drinkstart').value) || null,
+drinkEnd: parseInt(document.getElementById('f-drinkend').value) || null,
+notes: document.getElementById('f-notes').value.trim(),
+photo: pendingPhoto,
+consumed: false
+};
+wines.push(wine);
+saveWines(wines);
+e.target.reset();
+pendingPhoto = null;
+document.getElementById('photo-analysis-zone').innerHTML = '';
+updateHeaderSub();
+renderAll();
+toast('Vin ajouté !');
+switchTab('tab-cave');
+});
+
+document.getElementById('photo-zone').addEventListener('click', ()=>document.getElementById('photo-input').click());
+
+document.getElementById('photo-input').addEventListener('change', (e)=>{
+const file = e.target.files[0];
+if(!file) return;
+const reader = new FileReader();
+reader.onload = async (evt)=>{
+pendingPhoto = evt.target.result;
+const az = document.getElementById('photo-analysis-zone');
+az.innerHTML = <img class="photo-preview" src="${pendingPhoto}">`;
+
+if(!geminiApiKey){
+toast('Image chargée.');
+return;
+}
+
+az.innerHTML += <div style="font-size:12px; color:var(--parchment-dim); margin-bottom:10px;"&gt;&lt;span class="spinner"&gt;&lt;/span&gt; Analyse par l'IA...&lt;/div>;
+
+try {
+const base64Data = pendingPhoto.split(',')[1];
+const res = await fetch(https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
+method: 'POST',
+headers: {'Content-Type': 'application/json'},
+body: JSON.stringify({
+contents: [{
+parts: [
+{ text: "Extrais les infos de cette étiquette de vin en JSON direct sans markdown: {"name":"", "producer":"", "vintage":"", "type":"rouge|blanc|rose|champagne|cidre", "region":"", "drinkStart":2024, "drinkEnd":2030}" },
+{ inline_data: { mime_type: "image/jpeg", data: base64Data } }
+ ]
+}]
+})
+});
+const data = await res.json();
+let raw = data.candidates[0].content.parts[0].text.replace(/json|/g, '').trim();
+const info = JSON.parse(raw);
+if(info.name) document.getElementById('f-name').value = info.name;
+if(info.producer) document.getElementById('f-producer').value = info.producer;
+if(info.vintage) document.getElementById('f-vintage').value = info.vintage;
+if(info.type) document.getElementById('f-type').value = info.type;
+if(info.region) document.getElementById('f-region').value = info
